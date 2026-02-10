@@ -1,0 +1,253 @@
+{% extends 'base.html' %}
+
+{% block title %}Fish Market - Fresh Fish Marketplace{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Hero Section -->
+    <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white">
+        <div class="container mx-auto px-4 py-16">
+            <h1 class="text-4xl md:text-5xl font-bold mb-4">
+                🐟 Fresh Fish Marketplace
+            </h1>
+            <p class="text-xl text-blue-100 mb-8">
+                Buy fresh fish directly from local fishermen. Sustainable. Fresh. Affordable.
+            </p>
+            
+            <!-- Search Bar -->
+            <div class="max-w-2xl">
+                <form method="get" class="flex gap-4">
+                    <div class="flex-1 relative">
+                        <input type="text" 
+                               name="fish_type" 
+                               value="{{ fish_type_filter|default:'' }}"
+                               placeholder="Search for fish..." 
+                               class="w-full px-6 py-4 rounded-full text-gray-900 focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                        <i class="fas fa-search absolute right-6 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    </div>
+                    <button type="submit" class="bg-yellow-500 hover:bg-yellow-600 text-white px-8 py-4 rounded-full font-semibold transition-colors">
+                        Search
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Sidebar Filters -->
+            <aside class="lg:w-64 flex-shrink-0">
+                <div class="bg-white rounded-xl shadow-sm p-6 sticky top-24">
+                    <h3 class="font-bold text-lg mb-4 flex items-center">
+                        <i class="fas fa-filter mr-2"></i>Filters
+                    </h3>
+                    
+                    <!-- Fish Type Filter -->
+                    <div class="mb-6">
+                        <h4 class="font-medium text-gray-700 mb-2">Fish Type</h4>
+                        <form method="get" id="filter-form">
+                            {% if fish_type_filter or min_price or max_price or sort_by %}
+                            <a href="{% url 'fishing:marketplace' %}" class="text-sm text-blue-600 hover:underline mb-2 inline-block">
+                                <i class="fas fa-times mr-1"></i>Clear filters
+                            </a>
+                            {% endif %}
+                            
+                            <select name="fish_type" onchange="document.getElementById('filter-form').submit()" class="w-full border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">All Fish Types</option>
+                                {% for value, label in fish_types %}
+                                <option value="{{ value }}" {% if fish_type_filter == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            
+                            <!-- Price Range -->
+                            <h4 class="font-medium text-gray-700 mb-2 mt-4">Price Range (KES/kg)</h4>
+                            <div class="flex gap-2">
+                                <input type="number" name="min_price" value="{{ min_price|default:'' }}" placeholder="Min" class="w-1/2 border-gray-300 rounded-lg px-3 py-2 text-sm">
+                                <input type="number" name="max_price" value="{{ max_price|default:'' }}" placeholder="Max" class="w-1/2 border-gray-300 rounded-lg px-3 py-2 text-sm">
+                            </div>
+                            
+                            <!-- Sort By -->
+                            <h4 class="font-medium text-gray-700 mb-2 mt-4">Sort By</h4>
+                            <select name="sort" onchange="document.getElementById('filter-form').submit()" class="w-full border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                <option value="-created_at" {% if sort_by == '-created_at' or not sort_by %}selected{% endif %}>
+                                    Newest First
+                                </option>
+                                <option value="price_low" {% if sort_by == 'price_low' %}selected{% endif %}>
+                                    Price: Low to High
+                                </option>
+                                <option value="price_high" {% if sort_by == 'price_high' %}selected{% endif %}>
+                                    Price: High to Low
+                                </option>
+                                <option value="weight" {% if sort_by == 'weight' %}selected{% endif %}>
+                                    Most Available
+                                </option>
+                            </select>
+                            
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white mt-4 py-2 rounded-lg font-medium transition-colors">
+                                Apply Filters
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="flex-1">
+                <!-- Results Header -->
+                <div class="flex items-center justify-between mb-6">
+                    <p class="text-gray-600">
+                        {% if page_obj.paginator.count > 0 %}
+                        Showing {{ page_obj.start_index }} - {{ page_obj.end_index }} of {{ page_obj.paginator.count }} fresh fish listings
+                        {% else %}
+                        No fish available at the moment
+                        {% endif %}
+                    </p>
+                    
+                    {% if cart_count > 0 %}
+                    <a href="{% url 'fishing:cart' %}" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg font-medium flex items-center">
+                        <i class="fas fa-shopping-cart mr-2"></i>
+                        Cart ({{ cart_count }})
+                    </a>
+                    {% endif %}
+                </div>
+
+                {% if page_obj %}
+                <!-- Fish Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {% for fish in page_obj %}
+                    <div class="bg-white rounded-xl shadow-sm hover:shadow-lg transition-shadow duration-300 overflow-hidden">
+                        <!-- Fish Image -->
+                        <div class="relative h-48 bg-gradient-to-br from-blue-50 to-blue-100">
+                            {% if fish.image %}
+                            <img src="{{ fish.image.url }}" alt="{{ fish.name }}" class="w-full h-full object-cover">
+                            {% else %}
+                            <div class="w-full h-full flex items-center justify-center">
+                                <i class="fas fa-fish text-6xl text-blue-200"></i>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Badges -->
+                            <div class="absolute top-3 left-3 flex flex-wrap gap-2">
+                                {% if fish.is_organic %}
+                                <span class="bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+                                    <i class="fas fa-leaf mr-1"></i>Wild
+                                </span>
+                                {% endif %}
+                                {% if fish.is_frozen %}
+                                <span class="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+                                    <i class="fas fa-snowflake mr-1"></i>Frozen
+                                </span>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Status -->
+                            {% if fish.available_weight <= 5 %}
+                            <div class="absolute top-3 right-3">
+                                <span class="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                                    Only {{ fish.available_weight }}kg left!
+                                </span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Fish Details -->
+                        <div class="p-5">
+                            <div class="flex items-start justify-between mb-2">
+                                <div>
+                                    <h3 class="font-bold text-lg text-gray-900">{{ fish.name }}</h3>
+                                    <p class="text-sm text-gray-500">{{ fish.get_fish_type_display }}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-2xl font-bold text-green-600">KES {{ fish.price_per_kg }}</p>
+                                    <p class="text-xs text-gray-500">per kg</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Location & Date -->
+                            <div class="flex items-center gap-4 text-sm text-gray-500 mb-3">
+                                <span><i class="fas fa-map-marker-alt mr-1"></i>{{ fish.location|default:"Kenya" }}</span>
+                                <span><i class="fas fa-calendar mr-1"></i>{{ fish.catch_date|date:"M d" }}</span>
+                            </div>
+                            
+                            <!-- Fisherman Info -->
+                            <div class="flex items-center mb-4 p-2 bg-gray-50 rounded-lg">
+                                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-user text-blue-600 text-sm"></i>
+                                </div>
+                                <div class="ml-2 flex-1">
+                                    <p class="text-sm font-medium text-gray-700">{{ fish.fisherman.username }}</p>
+                                    <p class="text-xs text-gray-500">{{ fish.fisherman.location|default:"Kenya" }}</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Actions -->
+                            <div class="flex gap-2">
+                                <a href="{% url 'fishing:fish_detail' fish.id %}" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium text-center transition-colors">
+                                    View Details
+                                </a>
+                                {% if user.is_authenticated and user.role == 'customer' %}
+                                <a href="{% url 'fishing:add_to_cart' fish.id %}" class="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded-lg font-medium text-center transition-colors">
+                                    <i class="fas fa-cart-plus mr-1"></i>Add
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Pagination -->
+                {% if page_obj.has_other_pages %}
+                <div class="mt-8 flex justify-center">
+                    <nav class="flex items-center gap-2">
+                        {% if page_obj.has_previous %}
+                        <a href="?page={{ page_obj.previous_page_number }}{% if fish_type_filter %}&fish_type={{ fish_type_filter }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" 
+                           class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                        {% endif %}
+                        
+                        {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <span class="px-4 py-2 bg-blue-600 text-white rounded-lg">{{ num }}</span>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <a href="?page={{ num }}{% if fish_type_filter %}&fish_type={{ fish_type_filter }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" 
+                           class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                            {{ num }}
+                        </a>
+                        {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}{% if fish_type_filter %}&fish_type={{ fish_type_filter }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if sort_by %}&sort={{ sort_by }}{% endif %}" 
+                           class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                        {% endif %}
+                    </nav>
+                </div>
+                {% endif %}
+
+                {% else %}
+                <!-- Empty State -->
+                <div class="text-center py-16">
+                    <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-fish text-4xl text-gray-400"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-700 mb-2">No Fish Available</h3>
+                    <p class="text-gray-500 mb-6">Check back later for fresh fish listings!</p>
+                    {% if user.is_authenticated and user.role == 'fisherman' %}
+                    <a href="{% url 'fishing:add_fish' %}" class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                        <i class="fas fa-plus mr-2"></i>List Your First Fish
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </main>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

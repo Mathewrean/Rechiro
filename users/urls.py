@@ -16,11 +16,10 @@ urlpatterns = [
     path('profile/change-password/', views.change_password_view, name='change_password'),
     path('profile/delete/', views.delete_account_view, name='delete_account'),
     
-    # User management URLs
+    # Dashboard URL
     path('dashboard/', views.dashboard_view, name='dashboard'),
-    path('users/', views.UserListView.as_view(), name='user_list'),
-    path('users/<int:user_id>/', views.user_detail_view, name='user_detail'),
     
     # API URLs
     path('api/stats/', views.api_user_stats, name='api_user_stats'),
 ]
+

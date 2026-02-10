@@ -1,22 +1,34 @@
 {% extends 'base.html' %}
 
-{% block title %}Register - Sustainable Fishing{% endblock %}
+{% block title %}Register - FishNet{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 py-12 px-4 sm:px-6 lg:px-8">
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-teal-50 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-2xl w-full mx-auto space-y-8">
         <!-- Header -->
         <div class="text-center">
-            <div class="mx-auto h-16 w-16 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center shadow-lg">
+            <div class="mx-auto h-16 w-16 bg-gradient-to-r from-blue-500 to-teal-500 rounded-full flex items-center justify-center shadow-lg">
                 <i class="fas fa-user-plus text-white text-2xl"></i>
             </div>
             <h2 class="mt-6 text-3xl font-bold text-gray-900">
-                Join Our Community
+                Join FishNet Marketplace
             </h2>
             <p class="mt-2 text-sm text-gray-600">
-                Create your account and start your sustainable fishing journey
+                Create your account to buy or sell fresh fish
             </p>
         </div>
+
+        <!-- Success Message -->
+        {% if messages %}
+        <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded-r-lg">
+            {% for message in messages %}
+            <div class="flex items-center">
+                <i class="fas fa-check-circle mr-2"></i>
+                <span>{{ message }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
 
         <!-- Registration Form -->
         <div class="bg-white rounded-2xl shadow-xl p-8">
@@ -27,21 +39,21 @@
                 <div class="space-y-6">
                     <div class="border-b border-gray-200 pb-4">
                         <h3 class="text-lg font-medium text-gray-900 flex items-center">
-                            <i class="fas fa-user text-primary mr-2"></i>
-                            Basic Information
+                            <i class="fas fa-user text-blue-600 mr-2"></i>
+                            Account Information
                         </h3>
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                                <i class="fas fa-at text-primary mr-2"></i>Username
+                                <i class="fas fa-at text-blue-600 mr-2"></i>Username *
                             </label>
                             <input type="text" 
                                    name="{{ form.username.name }}" 
                                    id="{{ form.username.id_for_label }}"
                                    value="{{ form.username.value|default:'' }}"
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
                                    placeholder="Choose a username"
                                    required>
                             {% if form.username.errors %}
@@ -54,13 +66,13 @@
                         
                         <div>
                             <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                                <i class="fas fa-envelope text-primary mr-2"></i>Email Address
+                                <i class="fas fa-envelope text-blue-600 mr-2"></i>Email Address *
                             </label>
                             <input type="email" 
                                    name="{{ form.email.name }}" 
                                    id="{{ form.email.id_for_label }}"
                                    value="{{ form.email.value|default:'' }}"
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
                                    placeholder="your@email.com"
                                    required>
                             {% if form.email.errors %}
@@ -74,13 +86,13 @@
                     
                     <div>
                         <label for="{{ form.full_name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                            <i class="fas fa-id-card text-primary mr-2"></i>Full Name
+                            <i class="fas fa-id-card text-blue-600 mr-2"></i>Full Name *
                         </label>
                         <input type="text" 
                                name="{{ form.full_name.name }}" 
                                id="{{ form.full_name.id_for_label }}"
                                value="{{ form.full_name.value|default:'' }}"
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
                                placeholder="Enter your full name"
                                required>
                         {% if form.full_name.errors %}
@@ -90,72 +102,96 @@
                             </div>
                         {% endif %}
                     </div>
+                    
+                    <div>
+                        <label for="{{ form.phone.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-phone text-blue-600 mr-2"></i>Phone Number *
+                        </label>
+                        <input type="tel" 
+                               name="{{ form.phone.name }}" 
+                               id="{{ form.phone.id_for_label }}"
+                               value="{{ form.phone.value|default:'' }}"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                               placeholder="e.g., 254712345678"
+                               required>
+                        {% if form.phone.errors %}
+                            <div class="mt-1 text-sm text-red-600">
+                                <i class="fas fa-exclamation-circle mr-1"></i>
+                                {{ form.phone.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
 
-                <!-- Profile Info Section -->
+                <!-- Role Selection Section -->
                 <div class="space-y-6">
                     <div class="border-b border-gray-200 pb-4">
                         <h3 class="text-lg font-medium text-gray-900 flex items-center">
-                            <i class="fas fa-user-cog text-green-500 mr-2"></i>
-                            Profile Information
+                            <i class="fas fa-briefcase text-teal-500 mr-2"></i>
+                            Select Your Role
                         </h3>
                     </div>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label for="{{ form.role.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                                <i class="fas fa-briefcase text-primary mr-2"></i>Role
-                            </label>
-                            <select name="{{ form.role.name }}" 
-                                    id="{{ form.role.id_for_label }}"
-                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 bg-white"
-                                    required>
-                                {% for choice in form.role.field.choices %}
-                                    <option value="{{ choice.0 }}" {% if form.role.value == choice.0 %}selected{% endif %}>
-                                        {{ choice.1 }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                            {% if form.role.errors %}
-                                <div class="mt-1 text-sm text-red-600">
-                                    <i class="fas fa-exclamation-circle mr-1"></i>
-                                    {{ form.role.errors.0 }}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Fisherman Option -->
+                        <label class="relative cursor-pointer">
+                            <input type="radio" name="role" value="fisherman" class="peer sr-only" required {% if form.role.value == 'fisherman' %}checked{% endif %}>
+                            <div class="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-400 transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-blue-50">
+                                <div class="text-center">
+                                    <div class="mx-auto h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+                                        <i class="fas fa-fish text-blue-600 text-2xl"></i>
+                                    </div>
+                                    <h4 class="font-bold text-gray-900">Fisherman</h4>
+                                    <p class="text-sm text-gray-600 mt-1">Sell fresh fish directly to customers</p>
                                 </div>
-                            {% endif %}
-                        </div>
+                            </div>
+                        </label>
                         
-                        <div>
-                            <label for="{{ form.location.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                                <i class="fas fa-map-marker-alt text-primary mr-2"></i>Location <span class="text-gray-400">(Optional)</span>
-                            </label>
-                            <input type="text" 
-                                   name="{{ form.location.name }}" 
-                                   id="{{ form.location.id_for_label }}"
-                                   value="{{ form.location.value|default:'' }}"
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 placeholder-gray-400"
-                                   placeholder="Your fishing location">
-                            {% if form.location.errors %}
-                                <div class="mt-1 text-sm text-red-600">
-                                    <i class="fas fa-exclamation-circle mr-1"></i>
-                                    {{ form.location.errors.0 }}
+                        <!-- Customer Option -->
+                        <label class="relative cursor-pointer">
+                            <input type="radio" name="role" value="customer" class="peer sr-only" required {% if form.role.value == 'customer' %}checked{% endif %}>
+                            <div class="p-6 border-2 border-gray-200 rounded-xl hover:border-teal-400 transition-all duration-200 peer-checked:border-teal-500 peer-checked:bg-teal-50">
+                                <div class="text-center">
+                                    <div class="mx-auto h-16 w-16 bg-teal-100 rounded-full flex items-center justify-center mb-3">
+                                        <i class="fas fa-shopping-cart text-teal-600 text-2xl"></i>
+                                    </div>
+                                    <h4 class="font-bold text-gray-900">Customer</h4>
+                                    <p class="text-sm text-gray-600 mt-1">Buy fresh fish from fishermen</p>
                                 </div>
-                            {% endif %}
+                            </div>
+                        </label>
+                    </div>
+                    {% if form.role.errors %}
+                        <div class="text-sm text-red-600 text-center">
+                            <i class="fas fa-exclamation-circle mr-1"></i>
+                            {{ form.role.errors.0 }}
                         </div>
+                    {% endif %}
+                </div>
+
+                <!-- Location Section -->
+                <div class="space-y-6">
+                    <div class="border-b border-gray-200 pb-4">
+                        <h3 class="text-lg font-medium text-gray-900 flex items-center">
+                            <i class="fas fa-map-marker-alt text-orange-500 mr-2"></i>
+                            Location
+                        </h3>
                     </div>
                     
                     <div>
-                        <label for="{{ form.bio.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                            <i class="fas fa-pen text-primary mr-2"></i>Bio <span class="text-gray-400">(Optional)</span>
+                        <label for="{{ form.location.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-map-pin text-gray-500 mr-2"></i>Your Location
                         </label>
-                        <textarea name="{{ form.bio.name }}" 
-                                  id="{{ form.bio.id_for_label }}"
-                                  rows="3"
-                                  class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 placeholder-gray-400 resize-none"
-                                  placeholder="Tell us about yourself and your fishing experience...">{{ form.bio.value|default:'' }}</textarea>
-                        {% if form.bio.errors %}
+                        <input type="text" 
+                               name="{{ form.location.name }}" 
+                               id="{{ form.location.id_for_label }}"
+                               value="{{ form.location.value|default:'' }}"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                               placeholder="e.g., Mombasa, Kenya">
+                        {% if form.location.errors %}
                             <div class="mt-1 text-sm text-red-600">
                                 <i class="fas fa-exclamation-circle mr-1"></i>
-                                {{ form.bio.errors.0 }}
+                                {{ form.location.errors.0 }}
                             </div>
                         {% endif %}
                     </div>
@@ -165,7 +201,7 @@
                 <div class="space-y-6">
                     <div class="border-b border-gray-200 pb-4">
                         <h3 class="text-lg font-medium text-gray-900 flex items-center">
-                            <i class="fas fa-lock text-blue-500 mr-2"></i>
+                            <i class="fas fa-lock text-gray-600 mr-2"></i>
                             Security
                         </h3>
                     </div>
@@ -173,12 +209,12 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label for="{{ form.password1.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                                <i class="fas fa-key text-primary mr-2"></i>Password
+                                <i class="fas fa-key text-gray-500 mr-2"></i>Password *
                             </label>
                             <input type="password" 
                                    name="{{ form.password1.name }}" 
                                    id="{{ form.password1.id_for_label }}"
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
                                    placeholder="Choose a strong password"
                                    required>
                             {% if form.password1.errors %}
@@ -191,12 +227,12 @@
                         
                         <div>
                             <label for="{{ form.password2.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                                <i class="fas fa-check-circle text-primary mr-2"></i>Confirm Password
+                                <i class="fas fa-check-circle text-gray-500 mr-2"></i>Confirm Password *
                             </label>
                             <input type="password" 
                                    name="{{ form.password2.name }}" 
                                    id="{{ form.password2.id_for_label }}"
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
                                    placeholder="Confirm your password"
                                    required>
                             {% if form.password2.errors %}
@@ -218,7 +254,7 @@
                     </div>
                 {% endif %}
                 
-                <button type="submit" class="w-full bg-gradient-to-r from-green-500 to-blue-500 text-white font-medium py-3 px-4 rounded-lg hover:from-green-600 hover:to-blue-600 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105">
+                <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-teal-500 text-white font-medium py-4 px-4 rounded-lg hover:from-blue-600 hover:to-teal-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105 shadow-lg">
                     <i class="fas fa-user-plus mr-2"></i>
                     Create Account
                 </button>
@@ -227,39 +263,40 @@
             <div class="mt-8 text-center">
                 <p class="text-sm text-gray-600">
                     Already have an account? 
-                    <a href="{% url 'users:login' %}" class="font-medium text-primary hover:text-secondary transition-colors duration-200">
+                    <a href="{% url 'users:login' %}" class="font-medium text-blue-600 hover:text-blue-700 transition-colors duration-200">
                         Sign in here
                     </a>
                 </p>
             </div>
         </div>
 
-        <!-- Features -->
+        <!-- Benefits -->
         <div class="bg-white/50 backdrop-blur-sm rounded-xl p-6">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
                 <div class="flex flex-col items-center">
                     <div class="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
                         <i class="fas fa-fish text-blue-600 text-xl"></i>
                     </div>
-                    <h4 class="font-medium text-gray-900">Track Your Catches</h4>
-                    <p class="text-sm text-gray-600 mt-1">Log and share your fishing experiences</p>
+                    <h4 class="font-medium text-gray-900">Fresh Fish</h4>
+                    <p class="text-sm text-gray-600 mt-1">Direct from fishermen</p>
+                </div>
+                <div class="flex flex-col items-center">
+                    <div class="h-12 w-12 bg-teal-100 rounded-full flex items-center justify-center mb-3">
+                        <i class="fas fa-money-bill-wave text-teal-600 text-xl"></i>
+                    </div>
+                    <h4 class="font-medium text-gray-900">M-Pesa Payments</h4>
+                    <p class="text-sm text-gray-600 mt-1">Secure & convenient</p>
                 </div>
                 <div class="flex flex-col items-center">
                     <div class="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center mb-3">
-                        <i class="fas fa-users text-green-600 text-xl"></i>
+                        <i class="fas fa-truck text-green-600 text-xl"></i>
                     </div>
-                    <h4 class="font-medium text-gray-900">Join Community</h4>
-                    <p class="text-sm text-gray-600 mt-1">Connect with fellow anglers worldwide</p>
-                </div>
-                <div class="flex flex-col items-center">
-                    <div class="h-12 w-12 bg-purple-100 rounded-full flex items-center justify-center mb-3">
-                        <i class="fas fa-leaf text-purple-600 text-xl"></i>
-                    </div>
-                    <h4 class="font-medium text-gray-900">Learn Sustainability</h4>
-                    <p class="text-sm text-gray-600 mt-1">Discover eco-friendly fishing practices</p>
+                    <h4 class="font-medium text-gray-900">Delivery</h4>
+                    <p class="text-sm text-gray-600 mt-1">Door delivery or pickup</p>
                 </div>
             </div>
         </div>
     </div>
 </div>
 {% endblock %}
+

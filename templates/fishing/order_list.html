@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+
+{% block title %}My Orders - Fish Market{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="container mx-auto px-4">
+        <h1 class="text-3xl font-bold text-gray-800 mb-8">
+            <i class="fas fa-clipboard-list mr-3 text-blue-600"></i>My Orders
+        </h1>
+
+        <!-- Filters -->
+        <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
+            <form method="get" class="flex flex-wrap gap-4 items-center">
+                <span class="font-medium text-gray-700">Filter:</span>
+                <select name="status" onchange="this.form.submit()" class="border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    <option value="">All Orders</option>
+                    <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending Payment</option>
+                    <option value="PAID" {% if status_filter == 'PAID' %}selected{% endif %}>Processing</option>
+                    <option value="READY" {% if status_filter == 'READY' %}selected{% endif %}>Ready</option>
+                    <option value="DELIVERED" {% if status_filter == 'DELIVERED' %}selected{% endif %}>Delivered</option>
+                    <option value="CANCELLED" {% if status_filter == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
+                </select>
+                {% if status_filter %}
+                <a href="{% url 'fishing:order_list' %}" class="text-blue-600 hover:underline text-sm">Clear filter</a>
+                {% endif %}
+            </form>
+        </div>
+
+        {% if page_obj %}
+        <div class="space-y-4">
+            {% for order in page_obj %}
+            <div class="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                <div class="p-6 flex flex-col md:flex-row md:items-center gap-4">
+                    <!-- Order Info -->
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-2">
+                            <h3 class="text-lg font-bold text-gray-800">Order #{{ order.order_number }}</h3>
+                            <span class="px-3 py-1 rounded-full text-xs font-medium
+                                {% if order.status == 'PENDING' %}bg-yellow-100 text-yellow-800
+                                {% elif order.status == 'PAID' %}bg-blue-100 text-blue-800
+                                {% elif order.status == 'PROCESSING' %}bg-purple-100 text-purple-800
+                                {% elif order.status == 'READY' %}bg-green-100 text-green-800
+                                {% elif order.status == 'OUT_FOR_DELIVERY' %}bg-indigo-100 text-indigo-800
+                                {% elif order.status == 'DELIVERED' or order.status == 'PICKED_UP' %}bg-gray-100 text-gray-800
+                                {% elif order.status == 'FAILED' or order.status == 'CANCELLED' %}bg-red-100 text-red-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ order.get_status_display_name }}
+                            </span>
+                        </div>
+                        <p class="text-sm text-gray-500">{{ order.created_at|date:"F d, Y" }} at {{ order.created_at|time:"H:i" }}</p>
+                    </div>
+
+                    <!-- Order Summary -->
+                    <div class="flex items-center gap-6">
+                        <div class="text-center">
+                            <p class="text-2xl font-bold text-gray-800">{{ order.items.count }}</p>
+                            <p class="text-xs text-gray-500">Items</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-2xl font-bold text-green-600">KES {{ order.total_amount|floatformat:0 }}</p>
+                            <p class="text-xs text-gray-500">Total</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-sm text-gray-600 capitalize">{{ order.fulfillment_method }}</p>
+                            <p class="text-xs text-gray-500">Method</p>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <a href="{% url 'fishing:order_detail' order.order_number %}" 
+                       class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-2">
+                        View Details
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="mt-8 flex justify-center">
+            <nav class="flex items-center gap-2">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}" 
+                   class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+                {% endif %}
+                
+                {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <span class="px-4 py-2 bg-blue-600 text-white rounded-lg">{{ num }}</span>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <a href="?page={{ num }}{% if status_filter %}&status={{ status_filter }}{% endif %}" 
+                   class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                    {{ num }}
+                </a>
+                {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}" 
+                   class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+                {% endif %}
+            </nav>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <!-- Empty State -->
+        <div class="text-center py-16">
+            <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-clipboard-list text-4xl text-gray-400"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">No Orders Yet</h3>
+            <p class="text-gray-500 mb-6">Start shopping to see your orders here!</p>
+            <a href="{% url 'fishing:marketplace' %}" class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors">
+                <i class="fas fa-fish mr-2"></i>Browse Fish
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

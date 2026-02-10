@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}My Fish Listings - Fish Market{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="container mx-auto px-4">
+        <div class="flex items-center justify-between mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">
+                <i class="fas fa-fish mr-3 text-blue-600"></i>My Fish Listings
+            </h1>
+            <a href="{% url 'fishing:add_fish' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors">
+                <i class="fas fa-plus mr-2"></i>Add New
+            </a>
+        </div>
+
+        {% if page_obj %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for fish in page_obj %}
+            <div class="bg-white rounded-xl shadow-sm hover:shadow-lg transition-shadow overflow-hidden">
+                <!-- Fish Image -->
+                <div class="relative h-40 bg-gradient-to-br from-blue-50 to-blue-100">
+                    {% if fish.image %}
+                    <img src="{{ fish.image.url }}" alt="{{ fish.name }}" class="w-full h-full object-cover">
+                    {% else %}
+                    <div class="w-full h-full flex items-center justify-center">
+                        <i class="fas fa-fish text-5xl text-blue-200"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Status Badge -->
+                    <div class="absolute top-3 right-3">
+                        <span class="px-2 py-1 rounded-full text-xs font-medium
+                            {% if fish.status == 'available' %}bg-green-100 text-green-800
+                            {% elif fish.status == 'sold' %}bg-gray-100 text-gray-800
+                            {% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                            {{ fish.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Fish Details -->
+                <div class="p-5">
+                    <div class="flex items-start justify-between mb-2">
+                        <div>
+                            <h3 class="font-bold text-lg text-gray-900">{{ fish.name }}</h3>
+                            <p class="text-sm text-gray-500">{{ fish.get_fish_type_display }}</p>
+                        </div>
+                        <p class="text-xl font-bold text-green-600">KES {{ fish.price_per_kg }}</p>
+                    </div>
+
+                    <div class="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                        <span><i class="fas fa-weight mr-1"></i>{{ fish.available_weight }}kg</span>
+                        <span><i class="fas fa-calendar mr-1"></i>{{ fish.catch_date|date:"M d" }}</span>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex gap-2">
+                        <a href="{% url 'fishing:edit_fish' fish.id %}" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium text-center text-sm transition-colors">
+                            <i class="fas fa-edit mr-1"></i>Edit
+                        </a>
+                        <a href="{% url 'fishing:delete_fish' fish.id %}" class="flex-1 bg-red-100 hover:bg-red-200 text-red-700 py-2 rounded-lg font-medium text-center text-sm transition-colors">
+                            <i class="fas fa-trash mr-1"></i>Delete
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <div class="mt-8 flex justify-center">
+            <nav class="flex items-center gap-2">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">←</a>
+                {% endif %}
+                <span class="px-4 py-2 bg-blue-600 text-white rounded-lg">{{ page_obj.number }}</span>
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">→</a>
+                {% endif %}
+            </nav>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <!-- Empty State -->
+        <div class="text-center py-16">
+            <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-fish text-4xl text-gray-400"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">No Fish Listings Yet</h3>
+            <p class="text-gray-500 mb-6">Start selling by listing your first fish!</p>
+            <a href="{% url 'fishing:add_fish' %}" class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors">
+                <i class="fas fa-plus mr-2"></i>List Your First Fish
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

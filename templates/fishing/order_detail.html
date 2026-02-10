@@ -1,0 +1,228 @@
+{% extends 'base.html' %}
+
+{% block title %}Order {{ order.order_number }} - Fish Market{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="container mx-auto px-4">
+        <!-- Breadcrumb -->
+        <nav class="mb-6 text-sm">
+            <a href="{% url 'fishing:marketplace' %}" class="text-gray-500 hover:text-blue-600">
+                <i class="fas fa-home mr-1"></i>Marketplace
+            </a>
+            <span class="mx-2 text-gray-400">/</span>
+            <a href="{% url 'fishing:order_list' %}" class="text-gray-500 hover:text-blue-600">My Orders</a>
+            <span class="mx-2 text-gray-400">/</span>
+            <span class="text-gray-700">{{ order.order_number }}</span>
+        </nav>
+
+        <div class="grid lg:grid-cols-3 gap-8">
+            <!-- Order Details -->
+            <div class="lg:col-span-2">
+                <!-- Order Header -->
+                <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h1 class="text-2xl font-bold text-gray-800">Order {{ order.order_number }}</h1>
+                        <span class="px-4 py-2 rounded-full font-semibold
+                            {% if order.status == 'PENDING' %}bg-yellow-100 text-yellow-800
+                            {% elif order.status == 'PAID' %}bg-blue-100 text-blue-800
+                            {% elif order.status == 'READY' %}bg-green-100 text-green-800
+                            {% elif order.status == 'DELIVERED' %}bg-gray-100 text-gray-800
+                            {% elif order.status == 'FAILED' or order.status == 'CANCELLED' %}bg-red-100 text-red-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ order.get_status_display_name }}
+                        </span>
+                    </div>
+                    <p class="text-gray-500">Placed on {{ order.created_at|date:"F d, Y" }} at {{ order.created_at|time:"H:i" }}</p>
+                </div>
+
+                <!-- Order Items -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden mb-6">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-lg font-bold text-gray-800">Order Items</h2>
+                    </div>
+                    <div class="divide-y divide-gray-200">
+                        {% for item in items %}
+                        <div class="p-6 flex items-center gap-4">
+                            <div class="w-16 h-16 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-fish text-blue-300 text-xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-800">{{ item.fish_name }}</p>
+                                <p class="text-sm text-gray-500">{{ item.fish_type }} • {{ item.weight_kg }}kg</p>
+                                <p class="text-sm text-gray-500">Sold by: {{ item.fisherman.username }}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold text-green-600">KES {{ item.total_price|floatformat:2 }}</p>
+                                <p class="text-xs text-gray-500">KES {{ item.price_per_kg }}/kg</p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="bg-gray-50 p-6 border-t border-gray-200">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-gray-800">Total Amount</span>
+                            <span class="text-2xl font-bold text-green-600">KES {{ order.total_amount|floatformat:2 }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fulfillment Info -->
+                <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4">Fulfillment Details</h2>
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-sm text-gray-500">Method</p>
+                            <p class="font-semibold text-gray-800 capitalize">{{ order.fulfillment_method }}</p>
+                        </div>
+                        {% if order.delivery_location %}
+                        <div>
+                            <p class="text-sm text-gray-500">Location</p>
+                            <p class="font-semibold text-gray-800">{{ order.delivery_location }}</p>
+                        </div>
+                        {% endif %}
+                        {% if order.delivery_address %}
+                        <div class="md:col-span-2">
+                            <p class="text-sm text-gray-500">Address</p>
+                            <p class="font-semibold text-gray-800">{{ order.delivery_address }}</p>
+                        </div>
+                        {% endif %}
+                        {% if order.delivery_notes %}
+                        <div class="md:col-span-2">
+                            <p class="text-sm text-gray-500">Delivery Notes</p>
+                            <p class="font-semibold text-gray-800">{{ order.delivery_notes }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Delivery Tracking -->
+                {% if delivery %}
+                <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4">Delivery Status</h2>
+                    
+                    <div class="relative">
+                        <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+                        
+                        <div class="relative pl-10 pb-6">
+                            <div class="absolute left-2 w-5 h-5 rounded-full {% if delivery.status != 'PENDING' %}bg-green-500{% else %}bg-gray-300{% endif %}"></div>
+                            <p class="font-semibold text-gray-800">Order Placed</p>
+                            <p class="text-sm text-gray-500">{{ order.created_at|date:"M d, Y H:i" }}</p>
+                        </div>
+                        
+                        <div class="relative pl-10 pb-6">
+                            <div class="absolute left-2 w-5 h-5 rounded-full {% if delivery.status in 'READY,OUT_FOR_DELIVERY,DELIVERED,PICKED_UP' %}bg-green-500{% else %}bg-gray-300{% endif %}"></div>
+                            <p class="font-semibold text-gray-800">Ready for Fulfillment</p>
+                            <p class="text-sm text-gray-500">
+                                {% if delivery.estimated_delivery %}
+                                Est: {{ delivery.estimated_delivery|date:"M d, Y H:i" }}
+                                {% else %}
+                                Awaiting preparation
+                                {% endif %}
+                            </p>
+                        </div>
+                        
+                        <div class="relative pl-10 pb-6">
+                            <div class="absolute left-2 w-5 h-5 rounded-full {% if delivery.status in 'OUT_FOR_DELIVERY,DELIVERED,PICKED_UP' %}bg-green-500{% else %}bg-gray-300{% endif %}"></div>
+                            <p class="font-semibold text-gray-800">
+                                {% if order.fulfillment_method == 'pickup' %}
+                                Ready for Pickup
+                                {% else %}
+                                Out for Delivery
+                                {% endif %}
+                            </p>
+                        </div>
+                        
+                        <div class="relative pl-10">
+                            <div class="absolute left-2 w-5 h-5 rounded-full {% if delivery.status == 'DELIVERED' or delivery.status == 'PICKED_UP' %}bg-green-500{% else %}bg-gray-300{% endif %}"></div>
+                            <p class="font-semibold text-gray-800">
+                                {% if order.fulfillment_method == 'pickup' %}
+                                Picked Up
+                                {% else %}
+                                Delivered
+                                {% endif %}
+                            </p>
+                            {% if delivery.actual_delivery %}
+                            <p class="text-sm text-gray-500">{{ delivery.actual_delivery|date:"M d, Y H:i" }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if order.status == 'READY' and order.fulfillment_method == 'delivery' %}
+                    <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <p class="text-blue-800 font-medium">
+                            <i class="fas fa-truck mr-2"></i>Your order is ready and will be delivered soon!
+                        </p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if order.status == 'READY' and order.fulfillment_method == 'pickup' %}
+                    <div class="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
+                        <p class="text-green-800 font-medium">
+                            <i class="fas fa-store mr-2"></i>Your order is ready for pickup!
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Sidebar -->
+            <div class="lg:col-span-1">
+                <!-- Actions -->
+                <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4">Actions</h2>
+                    <div class="space-y-3">
+                        <a href="{% url 'fishing:marketplace' %}" class="block w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium text-center transition-colors">
+                            <i class="fas fa-shopping-bag mr-2"></i>Continue Shopping
+                        </a>
+                        {% if order.status == 'PENDING' %}
+                        <p class="text-sm text-gray-500 text-center">
+                            <i class="fas fa-clock mr-1"></i>Waiting for payment...
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Payment History -->
+                {% if transactions %}
+                <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4">Payment History</h2>
+                    <div class="space-y-3">
+                        {% for transaction in transactions %}
+                        <div class="p-3 bg-gray-50 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="font-semibold text-gray-800">KES {{ transaction.amount|floatformat:2 }}</p>
+                                    <p class="text-xs text-gray-500">{{ transaction.created_at|date:"M d, Y H:i" }}</p>
+                                </div>
+                                <span class="px-2 py-1 rounded-full text-xs font-medium
+                                    {% if transaction.status == 'COMPLETED' %}bg-green-100 text-green-800
+                                    {% elif transaction.status == 'PENDING' %}bg-yellow-100 text-yellow-800
+                                    {% else %}bg-red-100 text-red-800{% endif %}">
+                                    {{ transaction.get_status_display }}
+                                </span>
+                            </div>
+                            {% if transaction.mpesa_receipt_number %}
+                            <p class="text-xs text-gray-500 mt-1">M-Pesa: {{ transaction.mpesa_receipt_number }}</p>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Need Help -->
+                <div class="bg-gray-100 rounded-xl p-6">
+                    <h2 class="text-lg font-bold text-gray-800 mb-3">Need Help?</h2>
+                    <p class="text-sm text-gray-600 mb-4">Contact our support team if you have any questions about your order.</p>
+                    <a href="#" class="text-blue-600 hover:underline font-medium">
+                        <i class="fas fa-envelope mr-1"></i>Contact Support
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

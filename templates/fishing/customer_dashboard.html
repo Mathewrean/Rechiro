@@ -1,0 +1,172 @@
+{% extends 'base.html' %}
+
+{% block title %}Customer Dashboard - Fish Market{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="container mx-auto px-4">
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">
+                    <i class="fas fa-user mr-3 text-blue-600"></i>My Dashboard
+                </h1>
+                <p class="text-gray-500 mt-1">Welcome back, {{ user.username }}!</p>
+            </div>
+            <a href="{% url 'fishing:marketplace' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors">
+                <i class="fas fa-shopping-bag mr-2"></i>Browse Fish
+            </a>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Total Orders</p>
+                        <p class="text-3xl font-bold text-gray-800">{{ total_orders }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-clipboard-list text-blue-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Pending</p>
+                        <p class="text-3xl font-bold text-yellow-600">{{ pending_orders }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-clock text-yellow-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-500">Completed</p>
+                        <p class="text-3xl font-bold text-green-600">{{ completed_orders }}</p>
+                    </div>
+                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                        <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid lg:grid-cols-3 gap-8">
+            <!-- Main Content -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Recent Orders -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div class="p-6 border-b border-gray-200 flex items-center justify-between">
+                        <h2 class="text-xl font-bold text-gray-800">Recent Orders</h2>
+                        <a href="{% url 'fishing:order_list' %}" class="text-blue-600 hover:underline text-sm">View All Orders</a>
+                    </div>
+                    {% if recent_orders %}
+                    <div class="divide-y divide-gray-200">
+                        {% for order in recent_orders %}
+                        <div class="p-4 flex items-center justify-between hover:bg-gray-50">
+                            <div>
+                                <p class="font-semibold text-gray-800">Order #{{ order.order_number }}</p>
+                                <p class="text-sm text-gray-500">{{ order.created_at|date:"F d, Y" }} • {{ order.items.count }} items</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-bold text-green-600">KES {{ order.total_amount|floatformat:0 }}</p>
+                                <span class="px-2 py-1 rounded-full text-xs font-medium
+                                    {% if order.status == 'PENDING' %}bg-yellow-100 text-yellow-800
+                                    {% elif order.status == 'PAID' %}bg-blue-100 text-blue-800
+                                    {% elif order.status == 'READY' %}bg-green-100 text-green-800
+                                    {% elif order.status == 'DELIVERED' %}bg-gray-100 text-gray-800
+                                    {% elif order.status == 'CANCELLED' %}bg-red-100 text-red-800
+                                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ order.get_status_display_name }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="p-8 text-center text-gray-500">
+                        <i class="fas fa-shopping-bag text-4xl text-gray-300 mb-3"></i>
+                        <p>No orders yet. Start shopping!</p>
+                        <a href="{% url 'fishing:marketplace' %}" class="text-blue-600 hover:underline">Browse fish</a>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Quick Buy Section -->
+                <div class="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl shadow-sm p-6 text-white">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-xl font-bold mb-2">Fresh Fish Available!</h2>
+                            <p class="text-blue-100">Browse our marketplace for fresh fish from local fishermen</p>
+                        </div>
+                        <a href="{% url 'fishing:marketplace' %}" class="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors">
+                            Shop Now
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Profile Card -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4">Your Profile</h2>
+                    <div class="text-center mb-4">
+                        <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <i class="fas fa-user text-blue-600 text-xl"></i>
+                        </div>
+                        <p class="font-semibold text-gray-800">{{ user.username }}</p>
+                        <p class="text-sm text-gray-500">{{ user.email }}</p>
+                    </div>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Phone</span>
+                            <span class="text-gray-800">{{ user.phone|default:"Not set" }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Location</span>
+                            <span class="text-gray-800">{{ profile.delivery_location|default:"Not set" }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-500">Preferred</span>
+                            <span class="text-gray-800 capitalize">{{ profile.preferred_fulfillment|default:"Not set" }}</span>
+                        </div>
+                    </div>
+                    <a href="{% url 'users:edit_profile' %}" class="block w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg font-medium text-center mt-4 transition-colors">
+                        Edit Profile
+                    </a>
+                </div>
+
+                <!-- Delivery Address -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4">Delivery Address</h2>
+                    {% if profile.delivery_address %}
+                    <p class="text-gray-600">{{ profile.delivery_address }}</p>
+                    <p class="text-gray-500 mt-2">{{ profile.delivery_location }}</p>
+                    {% else %}
+                    <p class="text-gray-500">No address set</p>
+                    {% endif %}
+                    <a href="{% url 'users:edit_profile' %}" class="text-blue-600 hover:underline text-sm mt-3 inline-block">
+                        Update address
+                    </a>
+                </div>
+
+                <!-- Need Help -->
+                <div class="bg-gray-100 rounded-xl p-6">
+                    <h3 class="font-semibold text-gray-800 mb-2">Need Help?</h3>
+                    <p class="text-sm text-gray-600 mb-3">Contact support if you have questions about your orders.</p>
+                    <a href="#" class="text-blue-600 hover:underline text-sm">
+                        <i class="fas fa-envelope mr-1"></i>Contact Support
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

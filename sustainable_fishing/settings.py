@@ -11,8 +11,22 @@ SECRET_KEY = config('SECRET_KEY', default="django-insecure-ki)+%eng&-v5u$z%5_7^=
 DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default="*").split(',')
-CSRF_TRUSTED_ORIGINS = ["http://localhost:8000", "http://1270.0.1:8000", "https://sustainablefishing.onrender.com"]
-CORS_ALLOWED_ORIGINS = ["http://localhost:8000", "http://127.0.1:8000", "https://sustainablefishing.onrender.com"]
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:8000",
+    "http://127.0.1:8000",
+    "https://sustainablefishing.onrender.com",
+    "https://*.ngrok.io",
+    "https://*.ngrok-free.app",
+    "https://*.ngrok.app",
+]
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8000",
+    "http://127.0.1:8000",
+    "https://sustainablefishing.onrender.com",
+    "https://*.ngrok.io",
+    "https://*.ngrok-free.app",
+    "https://*.ngrok.app",
+]
 
 
 INSTALLED_APPS = [
@@ -24,7 +38,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "users",
     "fishing",
-    "content",
+    # content app removed - e-commerce only platform
 ]
 
 MIDDLEWARE = [
@@ -51,6 +65,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "users.admin_utils.admin_statistics_context",
+                "users.admin_utils.cart_context",
             ],
         },
     },
@@ -109,4 +124,64 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTH_USER_MODEL = 'users.User'
+
+ 
+# M-Pesa Daraja API Configuration
+# Get these from Safaricom Developer Portal
+# Consumer Key: FcbgCgnnIxIEY9fFWRl9PFXB15xgPqEUl9AIa3mIbGgPbTOg
+# Consumer Secret: e8M2xIKQo7ppCF3rKJdcR4XxYYw04LJa7HlVm8IDXmo8pPxzPoRp4jQcg2WiJxe8
+MPESA_CONSUMER_KEY = config('MPESA_CONSUMER_KEY', default='FcbgCgnnIxIEY9fFWRl9PFXB15xgPqEUl9AIa3mIbGgPbTOg')
+MPESA_CONSUMER_SECRET = config('MPESA_CONSUMER_SECRET', default='e8M2xIKQo7ppCF3rKJdcR4XxYYw04LJa7HlVm8IDXmo8pPxzPoRp4jQcg2WiJxe8')
+MPESA_BUSINESS_SHORT_CODE = config('MPESA_BUSINESS_SHORT_CODE', default='8501360')
+MPESA_PASSKEY = config('MPESA_PASSKEY', default='bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919')
+MPESA_CALLBACK_URL = config('MPESA_CALLBACK_URL', default='https://05fc-41-90-11-251.ngrok-free.app/api/mpesa/callback/')
+MPESA_BASE_URL = config('MPESA_BASE_URL', default='https://sandbox.safaricom.co.ke')
+
+# For B2C payments (refunds)
+MPESA_INITIATOR_NAME = config('MPESA_INITIATOR_NAME', default='')
+MPESA_SECURITY_CREDENTIAL = config('MPESA_SECURITY_CREDENTIAL', default='')
+
+
+# Logging Configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs/mpesa.log',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'fishing': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        'mpesa': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}
+
+
+# Create logs directory if it doesn't exist
+os.makedirs(BASE_DIR / 'logs', exist_ok=True)
 

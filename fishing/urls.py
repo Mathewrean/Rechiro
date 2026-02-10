@@ -4,10 +4,46 @@ from . import views
 app_name = 'fishing'
 
 urlpatterns = [
-    path('', views.catch_list, name='catch_list'),
-    path('<int:catch_id>/', views.catch_detail, name='catch_detail'),
-    path('create/', views.catch_create, name='catch_create'),
-    path('<int:catch_id>/update/', views.catch_update, name='catch_update'),
-    path('<int:catch_id>/delete/', views.catch_delete, name='catch_delete'),
-    path('my-catches/', views.my_catches, name='my_catches'),
+    # Marketplace
+    path('', views.fish_marketplace, name='marketplace'),
+    path('fish/<int:fish_id>/', views.fish_detail, name='fish_detail'),
+    
+    # Cart
+    path('cart/', views.cart_view, name='cart'),
+    path('cart/add/<int:fish_id>/', views.add_to_cart, name='add_to_cart'),
+    path('cart/update/<int:item_id>/', views.update_cart_item, name='update_cart_item'),
+    path('cart/remove/<int:item_id>/', views.remove_from_cart, name='remove_from_cart'),
+    
+    # Checkout
+    path('checkout/', views.checkout_initiate, name='checkout_initiate'),
+    path('checkout/process/', views.checkout_process, name='checkout_process'),
+    
+    # Orders
+    path('orders/', views.order_list, name='order_list'),
+    path('orders/<str:order_number>/', views.order_detail, name='order_detail'),
+    
+    # M-Pesa Callback
+    path('mpesa/callback/', views.mpesa_callback, name='mpesa_callback'),
+    
+    # Fisherman Dashboard
+    path('fisherman/dashboard/', views.fisherman_dashboard, name='fisherman_dashboard'),
+    path('fisherman/my-fish/', views.my_fish_listing, name='my_fish_listing'),
+    path('fisherman/add-fish/', views.add_fish, name='add_fish'),
+    path('fisherman/edit-fish/<int:fish_id>/', views.edit_fish, name='edit_fish'),
+    path('fisherman/delete-fish/<int:fish_id>/', views.delete_fish, name='delete_fish'),
+    path('fisherman/orders/', views.order_fulfillment, name='order_fulfillment'),
+    path('fisherman/orders/<str:order_number>/<int:item_id>/update/', views.update_order_status, name='update_order_status'),
+    
+    # Customer Dashboard
+    path('customer/dashboard/', views.customer_dashboard, name='customer_dashboard'),
+    path('customer/orders/<str:order_number>/tracking/', views.delivery_tracking, name='delivery_tracking'),
+    path('customer/orders/<str:order_number>/confirm/', views.confirm_delivery, name='confirm_delivery'),
+    
+    # API
+    path('api/cart/add/<int:fish_id>/', views.api_add_to_cart, name='api_add_to_cart'),
+    path('api/cart/count/', views.api_cart_count, name='api_cart_count'),
+    
+    # Home
+    path('home/', views.marketplace_home, name='home'),
 ]
+

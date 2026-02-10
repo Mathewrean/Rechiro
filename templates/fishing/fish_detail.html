@@ -1,0 +1,200 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ fish.name }} - Fresh Fish{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="container mx-auto px-4">
+        <!-- Breadcrumb -->
+        <nav class="mb-6 text-sm">
+            <a href="{% url 'fishing:marketplace' %}" class="text-gray-500 hover:text-blue-600">
+                <i class="fas fa-home mr-1"></i>Marketplace
+            </a>
+            <span class="mx-2 text-gray-400">/</span>
+            <span class="text-gray-700">{{ fish.name }}</span>
+        </nav>
+
+        <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div class="grid md:grid-cols-2 gap-8 p-8">
+                <!-- Fish Image -->
+                <div class="relative">
+                    <div class="aspect-square rounded-xl overflow-hidden bg-gradient-to-br from-blue-50 to-blue-100">
+                        {% if fish.image %}
+                        <img src="{{ fish.image.url }}" alt="{{ fish.name }}" class="w-full h-full object-cover">
+                        {% else %}
+                        <div class="w-full h-full flex flex-col items-center justify-center">
+                            <i class="fas fa-fish text-8xl text-blue-200 mb-4"></i>
+                            <p class="text-blue-300">No image available</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Badges -->
+                    <div class="absolute top-4 left-4 flex flex-wrap gap-2">
+                        {% if fish.is_organic %}
+                        <span class="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+                            <i class="fas fa-leaf mr-1"></i>Wild Caught
+                        </span>
+                        {% endif %}
+                        {% if fish.is_frozen %}
+                        <span class="bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+                            <i class="fas fa-snowflake mr-1"></i>Frozen
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Fish Details -->
+                <div>
+                    <div class="mb-4">
+                        <p class="text-blue-600 font-medium">{{ fish.get_fish_type_display }}</p>
+                        <h1 class="text-3xl font-bold text-gray-900 mt-1">{{ fish.name }}</h1>
+                    </div>
+
+                    <!-- Price -->
+                    <div class="bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4 mb-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm text-green-600">Price per kg</p>
+                                <p class="text-3xl font-bold text-green-700">KES {{ fish.price_per_kg }}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm text-green-600">Available</p>
+                                <p class="text-2xl font-bold text-green-700">{{ fish.available_weight }} kg</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    {% if fish.description %}
+                    <div class="mb-6">
+                        <h3 class="font-semibold text-gray-800 mb-2">Description</h3>
+                        <p class="text-gray-600">{{ fish.description }}</p>
+                    </div>
+                    {% endif %}
+
+                    <!-- Details Grid -->
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <p class="text-sm text-gray-500">Catch Date</p>
+                            <p class="font-semibold text-gray-800">{{ fish.catch_date|date:"F d, Y" }}</p>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-3">
+                            <p class="text-sm text-gray-500">Location</p>
+                            <p class="font-semibold text-gray-800">{{ fish.location|default:"Kenya" }}</p>
+                        </div>
+                        {% if fish.preparation_notes %}
+                        <div class="col-span-2 bg-gray-50 rounded-lg p-3">
+                            <p class="text-sm text-gray-500">Preparation Notes</p>
+                            <p class="font-semibold text-gray-800">{{ fish.preparation_notes }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Fisherman Info -->
+                    {% if fisherman_profile %}
+                    <div class="border-t pt-6 mb-6">
+                        <h3 class="font-semibold text-gray-800 mb-3">Sold by</h3>
+                        <div class="flex items-center p-4 bg-blue-50 rounded-xl">
+                            <div class="w-12 h-12 bg-blue-200 rounded-full flex items-center justify-center">
+                                <i class="fas fa-user text-blue-600 text-xl"></i>
+                            </div>
+                            <div class="ml-4 flex-1">
+                                <p class="font-semibold text-gray-800">{{ fish.fisherman.username }}</p>
+                                <p class="text-sm text-gray-600">{{ fisherman_profile.location }}</p>
+                            </div>
+                            <div class="text-right">
+                                {% if fisherman_profile.is_verified %}
+                                <span class="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-medium">
+                                    <i class="fas fa-check-circle mr-1"></i>Verified
+                                </span>
+                                {% endif %}
+                                {% if fisherman_profile.rating > 0 %}
+                                <div class="flex items-center mt-1">
+                                    <i class="fas fa-star text-yellow-400 mr-1"></i>
+                                    <span class="text-sm text-gray-600">{{ fisherman_profile.rating }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Add to Cart Form -->
+                    {% if user.is_authenticated %}
+                    {% if user.role == 'customer' and fish.is_available %}
+                    <div class="border-t pt-6">
+                        <h3 class="font-semibold text-gray-800 mb-4">Select Weight</h3>
+                        <form method="POST" action="{% url 'fishing:add_to_cart' fish.id %}" class="flex flex-col sm:flex-row gap-4">
+                            {% csrf_token %}
+                            <div class="flex-1">
+                                <label class="block text-sm text-gray-600 mb-1">Weight (kg)</label>
+                                <input type="number" name="weight" value="{{ cart_weight|default:1 }}" min="0.1" max="{{ fish.available_weight }}" step="0.1" 
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div class="flex-1 flex items-end">
+                                <button type="submit" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors flex items-center justify-center">
+                                    <i class="fas fa-cart-plus mr-2"></i>
+                                    <span>Add to Cart</span>
+                                </button>
+                            </div>
+                        </form>
+                        <p class="text-sm text-gray-500 mt-2">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Maximum: {{ fish.available_weight }}kg available
+                        </p>
+                    </div>
+                    {% elif user.role == 'fisherman' %}
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-800">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        As a fisherman, you can list fish for sale but cannot purchase them.
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <div class="border-t pt-6">
+                        <a href="{% url 'users:login' %}" class="block w-full bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold text-center transition-colors mb-3">
+                            Login to Purchase
+                        </a>
+                        <p class="text-center text-gray-500 text-sm">
+                            Don't have an account? 
+                            <a href="{% url 'users:register' %}" class="text-blue-600 hover:underline">Register here</a>
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Related Fish -->
+        {% if related_fish %}
+        <div class="mt-12">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">More from {{ fish.fisherman.username }}</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {% for related in related_fish %}
+                <a href="{% url 'fishing:fish_detail' related.id %}" class="bg-white rounded-xl shadow-sm hover:shadow-lg transition-shadow overflow-hidden group">
+                    <div class="aspect-square bg-gradient-to-br from-blue-50 to-blue-100 relative">
+                        {% if related.image %}
+                        <img src="{{ related.image.url }}" alt="{{ related.name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform">
+                        {% else %}
+                        <div class="w-full h-full flex items-center justify-center">
+                            <i class="fas fa-fish text-4xl text-blue-200"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="p-4">
+                        <h3 class="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">{{ related.name }}</h3>
+                        <p class="text-sm text-gray-500">{{ related.get_fish_type_display }}</p>
+                        <div class="flex items-center justify-between mt-2">
+                            <span class="text-green-600 font-bold">KES {{ related.price_per_kg }}/kg</span>
+                            <span class="text-gray-500 text-sm">{{ related.available_weight }}kg</span>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

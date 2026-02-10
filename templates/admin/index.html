@@ -9,16 +9,16 @@
         <span class="widget-metric-value">{{ total_users|default:0 }}</span>
     </div>
     <div class="widget-metric">
+        <span>Total Fish Listings</span>
+        <span class="widget-metric-value">{{ total_fish|default:0 }}</span>
+    </div>
+    <div class="widget-metric">
+        <span>Total Orders</span>
+        <span class="widget-metric-value">{{ total_orders|default:0 }}</span>
+    </div>
+    <div class="widget-metric">
         <span>Total Catches</span>
         <span class="widget-metric-value">{{ total_catches|default:0 }}</span>
-    </div>
-    <div class="widget-metric">
-        <span>Timeline Posts</span>
-        <span class="widget-metric-value">{{ total_posts|default:0 }}</span>
-    </div>
-    <div class="widget-metric">
-        <span>Educational Content</span>
-        <span class="widget-metric-value">{{ total_educational|default:0 }}</span>
     </div>
 </div>
 
@@ -36,9 +36,7 @@
             <h3>Quick Actions</h3>
             <div class="quick-actions">
                 <a href="{% url 'admin:users_user_add' %}" class="btn btn-primary">Add User</a>
-                <a href="{% url 'admin:fishing_catch_add' %}" class="btn btn-primary">Add Catch</a>
-                <a href="{% url 'admin:content_timelinepost_add' %}" class="btn btn-primary">Add Post</a>
-                <a href="{% url 'admin:content_educationalcontent_add' %}" class="btn btn-primary">Add Educational Content</a>
+                <a href="/fisherman/add-fish/" class="btn btn-primary">Add Fish</a>
             </div>
         </div>
     </div>

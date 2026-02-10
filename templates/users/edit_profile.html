@@ -3,11 +3,11 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gray-50 py-8">
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-teal-50 py-8">
     <div class="container mx-auto px-4">
         <!-- Header Section -->
         <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-primary to-secondary rounded-full mb-4">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-teal-500 rounded-full mb-4 shadow-lg">
                 <i class="fas fa-user-edit text-white text-2xl"></i>
             </div>
             <h1 class="text-4xl font-bold text-gray-800 mb-2">Edit Profile</h1>
@@ -16,8 +16,9 @@
 
         <!-- Main Content -->
         <div class="max-w-2xl mx-auto">
-            <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
-                <div class="bg-gradient-to-r from-primary to-secondary p-6">
+            <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+                <!-- Header Banner -->
+                <div class="bg-gradient-to-r from-blue-500 to-teal-500 p-6">
                     <div class="flex items-center">
                         <i class="fas fa-user-circle text-white text-2xl mr-3"></i>
                         <div>
@@ -46,7 +47,9 @@
                                                  alt="Current Profile Picture" 
                                                  class="w-full h-full object-cover">
                                         {% else %}
-                                            <i class="fas fa-user text-gray-400 text-3xl"></i>
+                                            <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-100 to-teal-100">
+                                                <i class="fas fa-user text-gray-400 text-4xl"></i>
+                                            </div>
                                         {% endif %}
                                     </div>
                                     
@@ -56,37 +59,13 @@
                                     </div>
                                 </div>
                                 
-                                <!-- Mobile File Upload Button (visible on small screens) -->
-                                <div class="block md:hidden w-full max-w-sm">
-                                    <button type="button" 
-                                            id="mobile-upload-btn" 
-                                            class="w-full bg-primary hover:bg-secondary text-white px-6 py-3 rounded-lg font-medium transition-colors duration-300 flex items-center justify-center space-x-2">
-                                        <i class="fas fa-camera"></i>
-                                        <span>Choose Profile Picture</span>
-                                    </button>
-                                    <p class="text-gray-400 text-xs text-center mt-2">
-                                        Supports: JPG, PNG, GIF • Max size: 5MB
-                                    </p>
-                                </div>
-                                
-                                <!-- Drag and Drop Area (hidden on mobile) -->
-                                <div id="drop-area" class="hidden md:block w-full max-w-md border-2 border-dashed border-gray-300 rounded-lg p-8 text-center transition-colors duration-300 hover:border-primary hover:bg-primary/5">
-                                    <div class="space-y-3">
-                                        <i class="fas fa-cloud-upload-alt text-4xl text-gray-400"></i>
-                                        <div>
-                                            <p class="text-gray-600 font-medium">Drag and drop your image here</p>
-                                            <p class="text-gray-500 text-sm">or</p>
-                                            <button type="button" 
-                                                    id="browse-btn" 
-                                                    class="bg-primary hover:bg-secondary text-white px-6 py-2 rounded-lg font-medium transition-colors duration-300 mt-2">
-                                                Browse Files
-                                            </button>
-                                        </div>
-                                        <p class="text-gray-400 text-xs">
-                                            Supports: JPG, PNG, GIF • Max size: 5MB
-                                        </p>
-                                    </div>
-                                </div>
+                                <!-- File Upload Button -->
+                                <button type="button" 
+                                        id="mobile-upload-btn" 
+                                        class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-medium transition-colors duration-300 flex items-center justify-center space-x-2">
+                                    <i class="fas fa-camera"></i>
+                                    <span>Change Profile Picture</span>
+                                </button>
                                 
                                 <!-- Hidden file input -->
                                 <input type="file" 
@@ -94,31 +73,6 @@
                                        name="{{ form.profile_picture.name }}"
                                        accept="image/*"
                                        class="hidden">
-                                
-                                <!-- Upload progress -->
-                                <div id="upload-progress" class="w-full max-w-md hidden">
-                                    <div class="bg-gray-200 rounded-full h-2">
-                                        <div class="bg-primary h-2 rounded-full transition-all duration-300" style="width: 0%" id="progress-bar"></div>
-                                    </div>
-                                    <p class="text-sm text-gray-600 mt-2 text-center">Processing...</p>
-                                </div>
-                                
-                                <!-- File info -->
-                                <div id="file-info" class="w-full max-w-md hidden">
-                                    <div class="bg-green-50 border border-green-200 rounded-lg p-3">
-                                        <div class="flex items-center justify-between">
-                                            <div class="flex items-center">
-                                                <i class="fas fa-check-circle text-green-500 mr-2"></i>
-                                                <span class="text-green-700 text-sm font-medium" id="file-name"></span>
-                                            </div>
-                                            <button type="button" 
-                                                    id="remove-file" 
-                                                    class="text-red-500 hover:text-red-700 transition-colors">
-                                                <i class="fas fa-times"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                             
                             {% if form.profile_picture.errors %}
@@ -132,129 +86,136 @@
                             {% endif %}
                         </div>
                         
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label for="{{ form.full_name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                                    <i class="fas fa-user mr-1"></i>Full Name
-                                </label>
-                                <div class="relative">
+                        <!-- User Info Section -->
+                        <div class="bg-gray-50 rounded-xl p-6 mb-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                                <i class="fas fa-info-circle text-blue-500 mr-2"></i>
+                                Account Details
+                            </h3>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="{{ form.full_name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                        <i class="fas fa-user mr-1"></i>Full Name *
+                                    </label>
                                     <input type="text" 
                                            id="{{ form.full_name.id_for_label }}"
                                            name="{{ form.full_name.name }}"
                                            value="{{ form.full_name.value|default:'' }}"
-                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 pl-10"
-                                           placeholder="Enter your full name">
-                                    <i class="fas fa-user absolute left-3 top-3.5 text-gray-400"></i>
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                                           placeholder="Enter your full name"
+                                           required>
+                                    {% if form.full_name.errors %}
+                                        <div class="mt-2 text-sm text-red-600">
+                                            {% for error in form.full_name.errors %}
+                                                <p class="flex items-center">
+                                                    <i class="fas fa-exclamation-circle mr-1"></i>{{ error }}
+                                                </p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
                                 </div>
-                                {% if form.full_name.errors %}
-                                    <div class="mt-2 text-sm text-red-600">
-                                        {% for error in form.full_name.errors %}
-                                            <p class="flex items-center">
-                                                <i class="fas fa-exclamation-circle mr-1"></i>{{ error }}
-                                            </p>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            </div>
-                            
-                            <div>
-                                <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                                    <i class="fas fa-envelope mr-1"></i>Email Address
-                                </label>
-                                <div class="relative">
+                                
+                                <div>
+                                    <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                        <i class="fas fa-envelope mr-1"></i>Email Address *
+                                    </label>
                                     <input type="email" 
                                            id="{{ form.email.id_for_label }}"
                                            name="{{ form.email.name }}"
                                            value="{{ form.email.value|default:'' }}"
-                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 pl-10"
-                                           placeholder="Enter your email address">
-                                    <i class="fas fa-envelope absolute left-3 top-3.5 text-gray-400"></i>
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                                           placeholder="Enter your email address"
+                                           required>
+                                    {% if form.email.errors %}
+                                        <div class="mt-2 text-sm text-red-600">
+                                            {% for error in form.email.errors %}
+                                                <p class="flex items-center">
+                                                    <i class="fas fa-exclamation-circle mr-1"></i>{{ error }}
+                                                </p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
                                 </div>
-                                {% if form.email.errors %}
-                                    <div class="mt-2 text-sm text-red-600">
-                                        {% for error in form.email.errors %}
-                                            <p class="flex items-center">
-                                                <i class="fas fa-exclamation-circle mr-1"></i>{{ error }}
-                                            </p>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
                             </div>
                         </div>
                         
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label for="{{ form.role.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                                    <i class="fas fa-user-tag mr-1"></i>Role
-                                </label>
-                                <div class="relative">
-                                    <select id="{{ form.role.id_for_label }}"
-                                            name="{{ form.role.name }}"
-                                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 pl-10 appearance-none bg-white">
-                                        {% for value, label in form.role.field.choices %}
-                                            <option value="{{ value }}" {% if form.role.value == value %}selected{% endif %}>{{ label }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    <i class="fas fa-user-tag absolute left-3 top-3.5 text-gray-400"></i>
-                                    <i class="fas fa-chevron-down absolute right-3 top-3.5 text-gray-400"></i>
-                                </div>
-                                {% if form.role.errors %}
-                                    <div class="mt-2 text-sm text-red-600">
-                                        {% for error in form.role.errors %}
-                                            <p class="flex items-center">
-                                                <i class="fas fa-exclamation-circle mr-1"></i>{{ error }}
-                                            </p>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            </div>
+                        <!-- Contact Info Section -->
+                        <div class="bg-gray-50 rounded-xl p-6 mb-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                                <i class="fas fa-phone text-teal-500 mr-2"></i>
+                                Contact Information
+                            </h3>
                             
-                            <div>
-                                <label for="{{ form.location.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                                    <i class="fas fa-map-marker-alt mr-1"></i>Location
-                                </label>
-                                <div class="relative">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="{{ form.phone.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                        <i class="fas fa-phone-alt mr-1"></i>Phone Number *
+                                    </label>
+                                    <input type="tel" 
+                                           id="{{ form.phone.id_for_label }}"
+                                           name="{{ form.phone.name }}"
+                                           value="{{ form.phone.value|default:'' }}"
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                                           placeholder="e.g., 254712345678"
+                                           required>
+                                    {% if form.phone.errors %}
+                                        <div class="mt-2 text-sm text-red-600">
+                                            {% for error in form.phone.errors %}
+                                                <p class="flex items-center">
+                                                    <i class="fas fa-exclamation-circle mr-1"></i>{{ error }}
+                                                </p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div>
+                                    <label for="{{ form.location.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                        <i class="fas fa-map-marker-alt mr-1"></i>Location
+                                    </label>
                                     <input type="text" 
                                            id="{{ form.location.id_for_label }}"
                                            name="{{ form.location.name }}"
                                            value="{{ form.location.value|default:'' }}"
-                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 pl-10"
-                                           placeholder="Enter your location">
-                                    <i class="fas fa-map-marker-alt absolute left-3 top-3.5 text-gray-400"></i>
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                                           placeholder="e.g., Mombasa, Kenya">
+                                    {% if form.location.errors %}
+                                        <div class="mt-2 text-sm text-red-600">
+                                            {% for error in form.location.errors %}
+                                                <p class="flex items-center">
+                                                    <i class="fas fa-exclamation-circle mr-1"></i>{{ error }}
+                                                </p>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
                                 </div>
-                                {% if form.location.errors %}
-                                    <div class="mt-2 text-sm text-red-600">
-                                        {% for error in form.location.errors %}
-                                            <p class="flex items-center">
-                                                <i class="fas fa-exclamation-circle mr-1"></i>{{ error }}
-                                            </p>
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
                             </div>
                         </div>
                         
-                        <div>
-                            <label for="{{ form.bio.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                                <i class="fas fa-file-alt mr-1"></i>Bio
-                            </label>
-                            <div class="relative">
-                                <textarea id="{{ form.bio.id_for_label }}"
-                                          name="{{ form.bio.name }}"
-                                          rows="4"
-                                          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 pl-10 resize-none"
-                                          placeholder="Tell us about yourself and your fishing experience...">{{ form.bio.value|default:'' }}</textarea>
-                                <i class="fas fa-file-alt absolute left-3 top-3.5 text-gray-400"></i>
-                            </div>
-                            {% if form.bio.errors %}
-                                <div class="mt-2 text-sm text-red-600">
-                                    {% for error in form.bio.errors %}
-                                        <p class="flex items-center">
-                                            <i class="fas fa-exclamation-circle mr-1"></i>{{ error }}
-                                        </p>
-                                    {% endfor %}
+                        <!-- Role Info (Read-only) -->
+                        <div class="bg-blue-50 rounded-xl p-6 mb-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                                <i class="fas fa-id-badge text-blue-500 mr-2"></i>
+                                Account Type
+                            </h3>
+                            <div class="flex items-center space-x-4">
+                                <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                                    {% if user.role == 'fisherman' %}
+                                        <i class="fas fa-fish text-blue-600 text-xl"></i>
+                                    {% else %}
+                                        <i class="fas fa-shopping-cart text-teal-600 text-xl"></i>
+                                    {% endif %}
                                 </div>
-                            {% endif %}
+                                <div>
+                                    <p class="text-gray-600 text-sm">Your account type</p>
+                                    <p class="text-xl font-semibold text-gray-800 capitalize">{{ user.get_role_display }}</p>
+                                </div>
+                            </div>
+                            <p class="text-sm text-gray-500 mt-3">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Role can only be set during registration. Contact admin to change.
+                            </p>
                         </div>
                         
                         {% if form.non_field_errors %}
@@ -270,13 +231,14 @@
                             </div>
                         {% endif %}
                         
+                        <!-- Action Buttons -->
                         <div class="flex flex-col sm:flex-row gap-3 pt-4">
                             <a href="{% url 'users:profile' %}" 
                                class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-medium transition-all duration-300 text-center">
                                 <i class="fas fa-arrow-left mr-2"></i>Cancel
                             </a>
                             <button type="submit" 
-                                    class="flex-1 bg-gradient-to-r from-primary to-secondary hover:from-secondary hover:to-primary text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105">
+                                    class="flex-1 bg-gradient-to-r from-blue-500 to-teal-500 hover:from-blue-600 hover:to-teal-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-lg">
                                 <i class="fas fa-save mr-2"></i>Update Profile
                             </button>
                         </div>
@@ -289,65 +251,13 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const dropArea = document.getElementById('drop-area');
     const fileInput = document.getElementById('{{ form.profile_picture.id_for_label }}');
-    const browseBtn = document.getElementById('browse-btn');
+    const browseBtn = document.getElementById('mobile-upload-btn');
     const profilePreview = document.getElementById('profile-preview');
     const profileOverlay = document.getElementById('profile-overlay');
-    const uploadProgress = document.getElementById('upload-progress');
-    const progressBar = document.getElementById('progress-bar');
-    const fileInfo = document.getElementById('file-info');
-    const fileName = document.getElementById('file-name');
-    const removeFileBtn = document.getElementById('remove-file');
-    
-    // Prevent default drag behaviors
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropArea.addEventListener(eventName, preventDefaults, false);
-        document.body.addEventListener(eventName, preventDefaults, false);
-    });
-    
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-    
-    // Highlight drop area when item is dragged over it
-    ['dragenter', 'dragover'].forEach(eventName => {
-        dropArea.addEventListener(eventName, highlight, false);
-    });
-    
-    ['dragleave', 'drop'].forEach(eventName => {
-        dropArea.addEventListener(eventName, unhighlight, false);
-    });
-    
-    function highlight(e) {
-        dropArea.classList.add('border-primary', 'bg-primary/10');
-    }
-    
-    function unhighlight(e) {
-        dropArea.classList.remove('border-primary', 'bg-primary/10');
-    }
-    
-    // Handle dropped files
-    dropArea.addEventListener('drop', handleDrop, false);
-    
-    function handleDrop(e) {
-        const dt = e.dataTransfer;
-        const files = dt.files;
-        
-        if (files.length > 0) {
-            handleFile(files[0]);
-        }
-    }
     
     // Handle browse button click
     browseBtn.addEventListener('click', () => {
-        fileInput.click();
-    });
-    
-    // Handle mobile upload button click
-    const mobileUploadBtn = document.getElementById('mobile-upload-btn');
-    mobileUploadBtn.addEventListener('click', () => {
         fileInput.click();
     });
     
@@ -359,116 +269,31 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle file input change
     fileInput.addEventListener('change', function(e) {
         if (e.target.files.length > 0) {
-            handleFile(e.target.files[0]);
+            const file = e.target.files[0];
+            
+            // Validate file type
+            if (!file.type.match('image.*')) {
+                alert('Please select a valid image file (JPG, PNG, GIF)');
+                return;
+            }
+            
+            // Validate file size (5MB limit)
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File size must be less than 5MB');
+                return;
+            }
+            
+            // Create file reader for preview
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                // Update preview
+                profilePreview.innerHTML = `<img src="${e.target.result}" alt="Profile Preview" class="w-full h-full object-cover">`;
+            };
+            
+            reader.readAsDataURL(file);
         }
     });
-    
-    // Handle file processing
-    function handleFile(file) {
-        // Validate file type
-        if (!file.type.match('image.*')) {
-            showError('Please select a valid image file (JPG, PNG, GIF)');
-            return;
-        }
-        
-        // Validate file size (5MB limit)
-        if (file.size > 5 * 1024 * 1024) {
-            showError('File size must be less than 5MB');
-            return;
-        }
-        
-        // Show upload progress
-        showUploadProgress();
-        
-        // Create a new FileList with the dropped file and assign it to the input
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(file);
-        fileInput.files = dataTransfer.files;
-        
-        // Create file reader for preview
-        const reader = new FileReader();
-        
-        reader.onload = function(e) {
-            // Update preview
-            profilePreview.innerHTML = `<img src="${e.target.result}" alt="Profile Preview" class="w-full h-full object-cover">`;
-            
-            // Show file info
-            fileName.textContent = file.name;
-            fileInfo.classList.remove('hidden');
-            
-            // Hide upload progress
-            hideUploadProgress();
-            
-            // Hide drop area
-            dropArea.classList.add('hidden');
-        };
-        
-        reader.readAsDataURL(file);
-        
-        // Simulate upload progress
-        simulateUploadProgress();
-    }
-    
-    // Show upload progress
-    function showUploadProgress() {
-        uploadProgress.classList.remove('hidden');
-        progressBar.style.width = '0%';
-    }
-    
-    // Hide upload progress
-    function hideUploadProgress() {
-        uploadProgress.classList.add('hidden');
-    }
-    
-    // Simulate upload progress
-    function simulateUploadProgress() {
-        let progress = 0;
-        const interval = setInterval(() => {
-            progress += Math.random() * 30;
-            if (progress >= 100) {
-                progress = 100;
-                clearInterval(interval);
-            }
-            progressBar.style.width = progress + '%';
-        }, 200);
-    }
-    
-    // Remove file
-    removeFileBtn.addEventListener('click', function() {
-        fileInput.value = '';
-        fileInfo.classList.add('hidden');
-        dropArea.classList.remove('hidden');
-        
-        // Reset preview to original or default
-        {% if user.profile_picture %}
-            profilePreview.innerHTML = `<img src="{{ user.profile_picture.url }}" alt="Current Profile Picture" class="w-full h-full object-cover">`;
-        {% else %}
-            profilePreview.innerHTML = `<i class="fas fa-user text-gray-400 text-3xl"></i>`;
-        {% endif %}
-    });
-    
-    // Show error message
-    function showError(message) {
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'fixed top-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg shadow-lg z-50';
-        errorDiv.innerHTML = `
-            <div class="flex items-center">
-                <i class="fas fa-exclamation-circle mr-2"></i>
-                <span>${message}</span>
-                <button class="ml-4 text-red-500 hover:text-red-700" onclick="this.parentElement.parentElement.remove()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `;
-        document.body.appendChild(errorDiv);
-        
-        // Auto remove after 5 seconds
-        setTimeout(() => {
-            if (errorDiv.parentElement) {
-                errorDiv.remove();
-            }
-        }, 5000);
-    }
 });
 </script>
 {% endblock %}

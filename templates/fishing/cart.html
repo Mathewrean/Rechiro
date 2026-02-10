@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+
+{% block title %}Shopping Cart - Fish Market{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="container mx-auto px-4">
+        <h1 class="text-3xl font-bold text-gray-800 mb-8">
+            <i class="fas fa-shopping-cart mr-3 text-blue-600"></i>Shopping Cart
+        </h1>
+
+        {% if items %}
+        <div class="grid lg:grid-cols-3 gap-8">
+            <!-- Cart Items -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div class="divide-y divide-gray-200">
+                        {% for item in items %}
+                        <div class="p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                            <!-- Fish Image -->
+                            <div class="w-24 h-24 flex-shrink-0 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg overflow-hidden">
+                                {% if item.fish.image %}
+                                <img src="{{ item.fish.image.url }}" alt="{{ item.fish.name }}" class="w-full h-full object-cover">
+                                {% else %}
+                                <div class="w-full h-full flex items-center justify-center">
+                                    <i class="fas fa-fish text-2xl text-blue-200"></i>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Item Details -->
+                            <div class="flex-1 min-w-0">
+                                <a href="{% url 'fishing:fish_detail' item.fish.id %}" class="text-lg font-semibold text-gray-800 hover:text-blue-600">
+                                    {{ item.fish.name }}
+                                </a>
+                                <p class="text-sm text-gray-500">{{ item.fish.get_fish_type_display }}</p>
+                                <p class="text-sm text-gray-600 mt-1">
+                                    Sold by: <span class="font-medium">{{ item.fish.fisherman.username }}</span>
+                                </p>
+                            </div>
+
+                            <!-- Weight Control -->
+                            <div class="flex items-center gap-2">
+                                <form method="POST" action="{% url 'fishing:update_cart_item' item.id %}" class="flex items-center gap-2">
+                                    {% csrf_token %}
+                                    <input type="number" name="weight" value="{{ item.weight_kg }}" min="0.1" max="{{ item.fish.available_weight }}" step="0.1" 
+                                           class="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-blue-500">
+                                    <span class="text-gray-500 font-medium">kg</span>
+                                    <button type="submit" class="text-blue-600 hover:text-blue-700">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </form>
+                            </div>
+
+                            <!-- Price -->
+                            <div class="text-right min-w-24">
+                                <p class="text-lg font-bold text-green-600">KES {{ item.get_total_price|floatformat:2 }}</p>
+                                <p class="text-xs text-gray-500">KES {{ item.fish.price_per_kg }}/kg</p>
+                            </div>
+
+                            <!-- Remove -->
+                            <a href="{% url 'fishing:remove_from_cart' item.id %}" class="text-red-500 hover:text-red-700 p-2">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Unavailable Items Warning -->
+                {% if unavailable_items %}
+                <div class="mt-4 bg-red-50 border border-red-200 rounded-xl p-4">
+                    <h3 class="font-semibold text-red-800 mb-2">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>Some items are no longer available
+                    </h3>
+                    <ul class="list-disc list-inside text-red-700">
+                        {% for item in unavailable_items %}
+                        <li>{{ item.fish.name }} - {{ item.fish.available_weight }}kg remaining</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Order Summary -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-xl shadow-sm p-6 sticky top-24">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">Order Summary</h2>
+                    
+                    <div class="space-y-3 mb-6">
+                        <div class="flex justify-between text-gray-600">
+                            <span>Total Items</span>
+                            <span class="font-medium">{{ cart.get_total_items }} items</span>
+                        </div>
+                        <div class="flex justify-between text-gray-600">
+                            <span>Total Weight</span>
+                            <span class="font-medium">{{ total_weight|floatformat:2 }} kg</span>
+                        </div>
+                        <hr class="border-gray-200">
+                        <div class="flex justify-between text-xl font-bold text-gray-800">
+                            <span>Total</span>
+                            <span class="text-green-600">KES {{ total_price|floatformat:2 }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Checkout Button -->
+                    <a href="{% url 'fishing:checkout_initiate' %}" class="block w-full bg-yellow-500 hover:bg-yellow-600 text-white py-4 rounded-xl font-bold text-center transition-colors mb-4">
+                        <i class="fas fa-lock mr-2"></i>Proceed to Checkout
+                    </a>
+
+                    <!-- Continue Shopping -->
+                    <a href="{% url 'fishing:marketplace' %}" class="block w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-xl font-medium text-center transition-colors">
+                        <i class="fas fa-arrow-left mr-2"></i>Continue Shopping
+                    </a>
+
+                    <!-- Security Info -->
+                    <div class="mt-6 pt-6 border-t border-gray-200">
+                        <div class="flex items-center justify-center text-gray-500 text-sm">
+                            <i class="fas fa-shield-alt mr-2 text-green-500"></i>
+                            Secure M-Pesa Payment
+                        </div>
+                        <p class="text-center text-xs text-gray-400 mt-2">
+                            Payments processed securely via Safaricom M-Pesa
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% else %}
+        <!-- Empty Cart -->
+        <div class="text-center py-16">
+            <div class="w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="fas fa-shopping-cart text-5xl text-gray-400"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">Your Cart is Empty</h2>
+            <p class="text-gray-500 mb-8">Looks like you haven't added any fish to your cart yet.</p>
+            <a href="{% url 'fishing:marketplace' %}" class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-semibold transition-colors">
+                <i class="fas fa-fish mr-2"></i>Browse Fresh Fish
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

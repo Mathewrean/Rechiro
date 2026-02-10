@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block title %}Order Fulfillment - Fish Market{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="container mx-auto px-4">
+        <h1 class="text-3xl font-bold text-gray-800 mb-8">
+            <i class="fas fa-tasks mr-3 text-blue-600"></i>Order Fulfillment
+        </h1>
+
+        {% if orders_by_number %}
+        <div class="space-y-6">
+            {% for order_number, order_data in orders_by_number.items %}
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                <!-- Order Header -->
+                <div class="p-6 border-b border-gray-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-800">Order #{{ order_number }}</h2>
+                        <p class="text-sm text-gray-500">{{ order_data.order.created_at|date:"F d, Y H:i" }}</p>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span class="px-3 py-1 rounded-full text-sm font-medium
+                            {% if order_data.order.status == 'PENDING' %}bg-yellow-100 text-yellow-800
+                            {% elif order_data.order.status == 'PAID' %}bg-blue-100 text-blue-800
+                            {% elif order_data.order.status == 'PROCESSING' %}bg-purple-100 text-purple-800
+                            {% elif order_data.order.status == 'READY' %}bg-green-100 text-green-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ order_data.order.get_status_display_name }}
+                        </span>
+                        <div class="text-right">
+                            <p class="text-lg font-bold text-green-600">KES {{ order_data.order.total_amount|floatformat:0 }}</p>
+                            <p class="text-sm text-gray-500">{{ order_data.total_weight|floatformat:1 }}kg total</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Order Items -->
+                <div class="divide-y divide-gray-200">
+                    {% for item in order_data.items %}
+                    <div class="p-4 flex flex-col md:flex-row md:items-center gap-4">
+                        <div class="flex-1">
+                            <p class="font-semibold text-gray-800">{{ item.fish_name }}</p>
+                            <p class="text-sm text-gray-500">{{ item.weight_kg }}kg × KES {{ item.price_per_kg }}/kg</p>
+                            <p class="text-sm text-gray-600">Customer: {{ item.order.customer.username }}</p>
+                            {% if item.order.fulfillment_method == 'delivery' %}
+                            <p class="text-sm text-gray-500">📍 {{ item.order.delivery_location }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="px-3 py-1 rounded-full text-xs font-medium
+                                {% if item.fulfillment_status == 'PENDING' %}bg-yellow-100 text-yellow-800
+                                {% elif item.fulfillment_status == 'READY' %}bg-green-100 text-green-800
+                                {% elif item.fulfillment_status == 'DELIVERED' %}bg-blue-100 text-blue-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                {{ item.get_fulfillment_status_display }}
+                            </span>
+                            <form method="POST" action="{% url 'fishing:update_order_status' order_number item.id %}" class="flex items-center gap-2">
+                                {% csrf_token %}
+                                <select name="status" class="border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500">
+                                    <option value="PENDING" {% if item.fulfillment_status == 'PENDING' %}selected{% endif %}>Pending</option>
+                                    <option value="READY">Ready</option>
+                                    <option value="DELIVERED">Delivered</option>
+                                </select>
+                                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg text-sm transition-colors">
+                                    Update
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Fulfillment Info -->
+                <div class="p-4 bg-gray-50 border-t border-gray-200">
+                    <p class="text-sm text-gray-600">
+                        <strong>Fulfillment Method:</strong> 
+                        {% if order_data.order.fulfillment_method == 'delivery' %}
+                        🚚 Delivery to {{ order_data.order.delivery_location }}
+                        {% else %}
+                        🏪 Customer Pickup
+                        {% endif %}
+                    </p>
+                    {% if order_data.order.delivery_notes %}
+                    <p class="text-sm text-gray-600 mt-1">
+                        <strong>Notes:</strong> {{ order_data.order.delivery_notes }}
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% else %}
+        <!-- Empty State -->
+        <div class="text-center py-16">
+            <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-clipboard-check text-4xl text-gray-400"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-800 mb-2">No Pending Orders</h3>
+            <p class="text-gray-500">Orders will appear here when customers purchase your fish.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

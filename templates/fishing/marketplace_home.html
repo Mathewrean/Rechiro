@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+
+{% block title %}Fish Market - Fresh Fish Marketplace{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="relative min-h-[70vh] flex items-center justify-center overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900"></div>
+    <div class="absolute inset-0 bg-black/10"></div>
+    
+    <div class="container mx-auto px-4 relative z-10 text-center">
+        <div class="animate-fadeInUp">
+            <h1 class="text-4xl md:text-6xl font-bold text-white mb-6">
+                🐟 Fresh Fish<br>
+                <span class="text-yellow-400">Direct from Fishermen</span>
+            </h1>
+            <p class="text-xl md:text-2xl text-blue-100 mb-8 max-w-2xl mx-auto">
+                Buy fresh, sustainable fish directly from local Kenyan fishermen. 
+                Support local communities and enjoy the freshest seafood.
+            </p>
+            <div class="flex flex-wrap justify-center gap-4">
+                <a href="{% url 'fishing:marketplace' %}" class="bg-yellow-500 hover:bg-yellow-600 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-105 shadow-lg">
+                    <i class="fas fa-shopping-bag mr-2"></i>Shop Fresh Fish
+                </a>
+                {% if not user.is_authenticated %}
+                <a href="{% url 'users:register' %}" class="border-2 border-white text-white hover:bg-white hover:text-blue-600 px-8 py-4 rounded-xl font-bold text-lg transition-all">
+                    <i class="fas fa-user-plus mr-2"></i>Join as Fisherman
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Wave decoration -->
+    <div class="absolute bottom-0 left-0 right-0">
+        <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-full h-auto">
+            <path d="M0 120L60 105C120 90 240 60 360 45C480 30 600 30 720 37.5C840 45 960 60 1080 67.5C1200 75 1320 75 1380 75L1440 75V120H1380C1320 120 1200 120 1080 120C960 120 840 120 720 120C600 120 480 120 360 120C240 120 120 120 60 120H0Z" fill="#f9fafb"/>
+        </svg>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-16 bg-gray-50">
+    <div class="container mx-auto px-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="bg-white rounded-2xl shadow-lg p-8 text-center transform hover:scale-105 transition-all">
+                <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-fish text-blue-600 text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">Always Fresh</h3>
+                <p class="text-gray-600">Fish caught daily and delivered quickly to ensure maximum freshness.</p>
+            </div>
+            <div class="bg-white rounded-2xl shadow-lg p-8 text-center transform hover:scale-105 transition-all">
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-leaf text-green-600 text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">Sustainable</h3>
+                <p class="text-gray-600">Support sustainable fishing practices and local fishermen.</p>
+            </div>
+            <div class="bg-white rounded-2xl shadow-lg p-8 text-center transform hover:scale-105 transition-all">
+                <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-mobile-alt text-yellow-600 text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">Easy Payment</h3>
+                <p class="text-gray-600">Pay securely with M-Pesa directly from your phone.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Fish Section -->
+{% if featured_fish %}
+<section class="py-16">
+    <div class="container mx-auto px-4">
+        <div class="text-center mb-12">
+            <h2 class="text-4xl font-bold text-gray-800 mb-4">Fresh Catches Today</h2>
+            <p class="text-xl text-gray-600">Browse our latest listings from fishermen across Kenya</p>
+        </div>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {% for fish in featured_fish %}
+            <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
+                <div class="aspect-square bg-gradient-to-br from-blue-50 to-blue-100 relative">
+                    {% if fish.image %}
+                    <img src="{{ fish.image.url }}" alt="{{ fish.name }}" class="w-full h-full object-cover">
+                    {% else %}
+                    <div class="w-full h-full flex items-center justify-center">
+                        <i class="fas fa-fish text-6xl text-blue-200"></i>
+                    </div>
+                    {% endif %}
+                    {% if fish.available_weight <= 5 %}
+                    <div class="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                        Only {{ fish.available_weight }}kg!
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="p-4">
+                    <h3 class="font-bold text-gray-800">{{ fish.name }}</h3>
+                    <p class="text-sm text-gray-500">{{ fish.get_fish_type_display }}</p>
+                    <div class="flex items-center justify-between mt-2">
+                        <span class="text-xl font-bold text-green-600">KES {{ fish.price_per_kg }}/kg</span>
+                        <span class="text-sm text-gray-500">{{ fish.available_weight }}kg</span>
+                    </div>
+                    <a href="{% url 'fishing:fish_detail' fish.id %}" class="block w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium text-center mt-3 transition-colors">
+                        View Details
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <div class="text-center mt-10">
+            <a href="{% url 'fishing:marketplace' %}" class="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-colors">
+                <i class="fas fa-arrow-right mr-2"></i>View All Fish
+            </a>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- CTA Section -->
+<section class="py-16 bg-gradient-to-r from-blue-600 to-blue-800 text-white">
+    <div class="container mx-auto px-4 text-center">
+        <h2 class="text-4xl font-bold mb-4">Are You a Fisherman?</h2>
+        <p class="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
+            Join our platform to sell your fresh catches directly to customers. 
+            Reach more buyers and grow your business.
+        </p>
+        {% if not user.is_authenticated %}
+        <a href="{% url 'users:register' %}" class="inline-flex items-center bg-yellow-500 hover:bg-yellow-600 text-white px-8 py-4 rounded-xl font-bold text-lg transition-colors">
+            <i class="fas fa-user-plus mr-2"></i>Register as Fisherman
+        </a>
+        {% elif user.role == 'fisherman' %}
+        <a href="{% url 'fishing:add_fish' %}" class="inline-flex items-center bg-yellow-500 hover:bg-yellow-600 text-white px-8 py-4 rounded-xl font-bold text-lg transition-colors">
+            <i class="fas fa-plus mr-2"></i>List Your Fish
+        </a>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+

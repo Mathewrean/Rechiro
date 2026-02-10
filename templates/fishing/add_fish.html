@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block title %}List New Fish - Fish Market{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="container mx-auto px-4 max-w-3xl">
+        <h1 class="text-3xl font-bold text-gray-800 mb-8">
+            <i class="fas fa-plus-circle mr-3 text-blue-600"></i>List New Fish
+        </h1>
+
+        <div class="bg-white rounded-xl shadow-sm p-8">
+            <form method="POST" class="space-y-6">
+                {% csrf_token %}
+                
+                <!-- Basic Info -->
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label for="name" class="block font-semibold text-gray-700 mb-2">Fish Name *</label>
+                        <input type="text" name="name" id="name" required placeholder="e.g., Fresh Tilapia"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <div>
+                        <label for="fish_type" class="block font-semibold text-gray-700 mb-2">Fish Type *</label>
+                        <select name="fish_type" id="fish_type" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="">Select type</option>
+                            {% for value, label in fish_types %}
+                            <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="catch_date" class="block font-semibold text-gray-700 mb-2">Catch Date *</label>
+                        <input type="date" name="catch_date" id="catch_date" required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label for="description" class="block font-semibold text-gray-700 mb-2">Description</label>
+                    <textarea name="description" id="description" rows="3" placeholder="Describe your fish..."
+                              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+
+                <!-- Pricing & Weight -->
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="price_per_kg" class="block font-semibold text-gray-700 mb-2">Price per kg (KES) *</label>
+                        <input type="number" name="price_per_kg" id="price_per_kg" required min="1" step="1" placeholder="e.g., 500"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <div>
+                        <label for="available_weight" class="block font-semibold text-gray-700 mb-2">Available Weight (kg) *</label>
+                        <input type="number" name="available_weight" id="available_weight" required min="0.1" step="0.1" placeholder="e.g., 10"
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+
+                <!-- Location -->
+                <div>
+                    <label for="location" class="block font-semibold text-gray-700 mb-2">Catch Location</label>
+                    <input type="text" name="location" id="location" placeholder="e.g., Lake Victoria, Mombasa Coast"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <!-- Options -->
+                <div class="grid grid-cols-2 gap-4">
+                    <label class="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input type="checkbox" name="is_organic" class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 mr-3">
+                        <div>
+                            <p class="font-semibold text-gray-800">Wild Caught</p>
+                            <p class="text-sm text-gray-500">Organically caught</p>
+                        </div>
+                    </label>
+
+                    <label class="flex items-center p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input type="checkbox" name="is_frozen" class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 mr-3">
+                        <div>
+                            <p class="font-semibold text-gray-800">Frozen</p>
+                            <p class="text-sm text-gray-500">Currently frozen</p>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- Preparation Notes -->
+                <div>
+                    <label for="preparation_notes" class="block font-semibold text-gray-700 mb-2">Preparation Notes</label>
+                    <textarea name="preparation_notes" id="preparation_notes" rows="2" 
+                              placeholder="e.g., Cleaned and gutted, Filleted..."
+                              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"></textarea>
+                </div>
+
+                <!-- Submit -->
+                <div class="flex gap-4 pt-4">
+                    <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold text-lg transition-colors">
+                        <i class="fas fa-check mr-2"></i>List Fish
+                    </button>
+                    <a href="{% url 'fishing:fisherman_dashboard' %}" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-4 rounded-xl font-bold text-lg text-center transition-colors">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Set default date to today
+    document.getElementById('catch_date').valueAsDate = new Date();
+</script>
+{% endblock %}
+
