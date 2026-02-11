@@ -21,6 +21,23 @@ from users.models import FishermanProfile, CustomerProfile
 
 logger = logging.getLogger(__name__)
 
+
+def _fisherman_payment_ready(profile, fisherman_user):
+    """
+    Determine if fisherman can receive checkout-triggered STK requests.
+    Uses fallback phone from profile/user when mpesa_phone is not explicitly set.
+    """
+    payment_phone = profile.mpesa_phone or profile.phone or fisherman_user.phone
+    if not payment_phone:
+        return False, "missing M-Pesa phone number"
+
+    payment_type = profile.mpesa_payment_type or 'STK_PUSH'
+    if payment_type == 'PAYBILL' and not profile.mpesa_paybill_number:
+        return False, "missing Paybill number"
+    if payment_type == 'TILL' and not profile.mpesa_till_number:
+        return False, "missing Till number"
+    return True, ""
+
 def fish_marketplace(request):
     """Display all available fish in Amazon-style grid layout"""
     fish_list = Fish.objects.filter(
@@ -331,9 +348,20 @@ def checkout_process(request):
         except FishermanProfile.DoesNotExist:
             messages.error(request, f'Fisherman profile missing for {item.fish.name}.')
             return redirect('fishing:cart')
-        if not profile.is_verified or not profile.mpesa_phone:
-            messages.error(request, f'Fisherman for {item.fish.name} is not payment-ready.')
+        is_ready, reason = _fisherman_payment_ready(profile, item.fish.fisherman)
+        if not is_ready:
+            messages.error(
+                request,
+                f'Fisherman for {item.fish.name} is not payment-ready ({reason}).'
+            )
             return redirect('fishing:cart')
+        if not profile.is_verified:
+            # Auto-verify when complete M-Pesa config is present.
+            profile.is_verified = True
+            profile.save(update_fields=['is_verified', 'updated_at'])
+        if not profile.mpesa_phone:
+            profile.mpesa_phone = profile.phone or item.fish.fisherman.phone
+            profile.save(update_fields=['mpesa_phone', 'updated_at'])
         fishermen_profiles[item.fish.fisherman_id] = profile
 
     pickup_point = None
@@ -960,6 +988,51 @@ def confirm_delivery(request, order_number):
     
     context = {'order': order}
     return render(request, 'fishing/confirm_delivery.html', context)
+
+
+@login_required
+def manage_pickup_points(request):
+    """Create and manage startup pickup points."""
+    if request.user.role not in ['fisherman', 'delivery', 'admin'] and not request.user.is_staff:
+        messages.error(request, 'Access denied.')
+        return redirect('fishing:marketplace')
+
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        general_location = request.POST.get('general_location', '').strip()
+        contact_person = request.POST.get('contact_person', '').strip()
+        phone_number = request.POST.get('phone_number', '').strip()
+        latitude = request.POST.get('latitude', '').strip()
+        longitude = request.POST.get('longitude', '').strip()
+
+        if not name or not general_location or not contact_person or not phone_number:
+            messages.error(request, 'Please fill all required pickup point fields.')
+            return redirect('fishing:manage_pickup_points')
+
+        point = PickupPoint(
+            name=name,
+            general_location=general_location,
+            contact_person=contact_person,
+            phone_number=phone_number,
+        )
+        if latitude:
+            try:
+                point.latitude = Decimal(latitude)
+            except Exception:
+                messages.error(request, 'Invalid latitude value.')
+                return redirect('fishing:manage_pickup_points')
+        if longitude:
+            try:
+                point.longitude = Decimal(longitude)
+            except Exception:
+                messages.error(request, 'Invalid longitude value.')
+                return redirect('fishing:manage_pickup_points')
+        point.save()
+        messages.success(request, f'Pickup point "{point.name}" added.')
+        return redirect('fishing:manage_pickup_points')
+
+    points = PickupPoint.objects.all().order_by('name')
+    return render(request, 'fishing/manage_pickup_points.html', {'pickup_points': points})
 
 
 @login_required

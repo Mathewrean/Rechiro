@@ -89,6 +89,12 @@
                                 {% endfor %}
                             </select>
                             <button type="button" id="load-nearby-points" class="mt-2 text-sm text-blue-600 hover:underline">Use my location to sort nearby pickup points</button>
+                            {% if user.role == 'fisherman' or user.role == 'delivery' or user.role == 'admin' or user.is_staff %}
+                                <a href="{% url 'fishing:manage_pickup_points' %}" class="block mt-2 text-sm text-blue-600 hover:underline">Add or manage pickup points</a>
+                            {% endif %}
+                            {% if not pickup_points %}
+                                <p class="mt-2 text-sm text-amber-700">No pickup points are available yet.</p>
+                            {% endif %}
                         </div>
 
                         <div class="mb-4">

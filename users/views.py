@@ -120,18 +120,81 @@ def profile_view(request):
 def edit_profile_view(request):
     """Handle profile editing"""
     user = request.user
-    
+    fisherman_form = None
+    customer_form = None
+
     if request.method == 'POST':
         form = ProfileUpdateForm(request.POST, request.FILES, instance=request.user)
-        if form.is_valid():
+        if user.role == 'fisherman':
+            fisherman_profile, _ = FishermanProfile.objects.get_or_create(
+                user=user,
+                defaults={
+                    'phone': user.phone or '',
+                    'location': user.location or '',
+                    'contact_details': '',
+                }
+            )
+            fisherman_form = FishermanProfileForm(
+                request.POST,
+                instance=fisherman_profile,
+                prefix='fisher',
+            )
+            profiles_valid = fisherman_form.is_valid()
+        elif user.role == 'customer':
+            customer_profile, _ = CustomerProfile.objects.get_or_create(
+                user=user,
+                defaults={
+                    'phone': user.phone or '',
+                    'delivery_location': user.location or '',
+                    'delivery_address': '',
+                    'preferred_fulfillment': 'delivery',
+                }
+            )
+            customer_form = CustomerProfileForm(
+                request.POST,
+                instance=customer_profile,
+                prefix='customer',
+            )
+            profiles_valid = customer_form.is_valid()
+        else:
+            profiles_valid = True
+
+        if form.is_valid() and profiles_valid:
             form.save()
+            if fisherman_form:
+                fisherman_form.save()
+            if customer_form:
+                customer_form.save()
             messages.success(request, 'Your profile has been updated successfully.')
             return redirect('users:profile')
     else:
         form = ProfileUpdateForm(instance=request.user)
+        if user.role == 'fisherman':
+            fisherman_profile, _ = FishermanProfile.objects.get_or_create(
+                user=user,
+                defaults={
+                    'phone': user.phone or '',
+                    'location': user.location or '',
+                    'contact_details': '',
+                }
+            )
+            fisherman_form = FishermanProfileForm(instance=fisherman_profile, prefix='fisher')
+        elif user.role == 'customer':
+            customer_profile, _ = CustomerProfile.objects.get_or_create(
+                user=user,
+                defaults={
+                    'phone': user.phone or '',
+                    'delivery_location': user.location or '',
+                    'delivery_address': '',
+                    'preferred_fulfillment': 'delivery',
+                }
+            )
+            customer_form = CustomerProfileForm(instance=customer_profile, prefix='customer')
     
     context = {
         'form': form,
+        'fisherman_form': fisherman_form,
+        'customer_form': customer_form,
         'title': 'Edit Profile - FishNet'
     }
     return render(request, 'users/edit_profile.html', context)
@@ -236,4 +299,3 @@ class UserProfileUpdateView(LoginRequiredMixin, UpdateView):
         context = super().get_context_data(**kwargs)
         context['title'] = 'Edit Profile - FishNet'
         return context
-

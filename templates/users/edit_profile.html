@@ -217,6 +217,51 @@
                                 Role can only be set during registration. Contact admin to change.
                             </p>
                         </div>
+
+                        {% if fisherman_form %}
+                        <div class="bg-gray-50 rounded-xl p-6 mb-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                                <i class="fas fa-wallet text-green-600 mr-2"></i>
+                                Fisherman Payment Setup
+                            </h3>
+                            <p class="text-sm text-gray-600 mb-4">
+                                Complete these fields so customers can checkout your listings.
+                            </p>
+                            <div class="space-y-4">
+                                {% for field in fisherman_form %}
+                                    <div>
+                                        <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
+                                        {{ field }}
+                                        {% if field.help_text %}<p class="text-xs text-gray-500 mt-1">{{ field.help_text }}</p>{% endif %}
+                                        {% if field.errors %}
+                                            <p class="text-sm text-red-600 mt-1">{{ field.errors.0 }}</p>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if customer_form %}
+                        <div class="bg-gray-50 rounded-xl p-6 mb-6">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                                <i class="fas fa-truck text-blue-600 mr-2"></i>
+                                Customer Delivery Preferences
+                            </h3>
+                            <div class="space-y-4">
+                                {% for field in customer_form %}
+                                    <div>
+                                        <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">{{ field.label }}</label>
+                                        {{ field }}
+                                        {% if field.help_text %}<p class="text-xs text-gray-500 mt-1">{{ field.help_text }}</p>{% endif %}
+                                        {% if field.errors %}
+                                            <p class="text-sm text-red-600 mt-1">{{ field.errors.0 }}</p>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
                         
                         {% if form.non_field_errors %}
                             <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">

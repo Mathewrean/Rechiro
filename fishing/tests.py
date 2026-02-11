@@ -95,6 +95,29 @@ class CheckoutAndPaymentFlowTests(TestCase):
         self.assertEqual(tx.net_payout, Decimal('980.00'))
 
     @patch('fishing.views.initiate_stk_push')
+    def test_checkout_allows_unverified_fisherman_when_mpesa_config_is_complete(self, mock_stk):
+        profile = self.fisherman.fisherman_profile
+        profile.is_verified = False
+        profile.save(update_fields=['is_verified'])
+        mock_stk.return_value = {
+            'success': True,
+            'merchant_request_id': 'MRQ9',
+            'checkout_request_id': 'CRQ9',
+        }
+
+        self.client.login(username='buyer', password='testpass123')
+        cart = Cart.objects.create(user=self.customer)
+        CartItem.objects.create(cart=cart, fish=self.fish, weight_kg=Decimal('1.00'))
+        response = self.client.post(reverse('fishing:checkout_process'), {
+            'fulfillment_method': 'delivery',
+            'delivery_location': 'Nairobi CBD',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(Order.objects.filter(customer=self.customer).exists())
+        profile.refresh_from_db()
+        self.assertTrue(profile.is_verified)
+
+    @patch('fishing.views.initiate_stk_push')
     def test_callback_success_marks_fully_paid_and_delivery_in_progress(self, mock_stk):
         mock_stk.return_value = {
             'success': True,
@@ -235,3 +258,14 @@ class DeliveryAndPickupEndpointsTests(TestCase):
         self.assertEqual(self.order.status, 'DELIVERED')
         self.assertEqual(self.delivery.status, 'DELIVERED')
         self.assertTrue(DeliveryAuditLog.objects.filter(order=self.order, new_status='DELIVERED').exists())
+
+    def test_manage_pickup_points_page_allows_delivery_role_to_add(self):
+        self.client.login(username='deliver1', password='testpass123')
+        response = self.client.post(reverse('fishing:manage_pickup_points'), {
+            'name': 'Kilimani Point',
+            'general_location': 'Kilimani',
+            'contact_person': 'Bob',
+            'phone_number': '0700000002',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(PickupPoint.objects.filter(name='Kilimani Point').exists())
