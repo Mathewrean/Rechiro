@@ -412,13 +412,18 @@ def checkout_process(request):
         payment_errors = []
         for order_item in order.items.select_related('fisherman', 'fish'):
             fisher_profile = fishermen_profiles.get(order_item.fisherman_id)
+            payment_type = fisher_profile.mpesa_payment_type or 'STK_PUSH'
+            if payment_type in ['STK_PUSH', 'PAYBILL']:
+                transaction_type = 'CustomerPayBillOnline'
+            else:
+                transaction_type = 'CustomerBuyGoodsOnline'
             payment_result = initiate_stk_push(
                 phone_number=request.user.phone,
                 amount=float(order_item.total_price),
                 order_number=order.order_number,
                 business_shortcode=(fisher_profile.mpesa_paybill_number or fisher_profile.mpesa_till_number or None),
                 account_reference=(fisher_profile.mpesa_account_reference or f"{order.order_number}-{order_item.id}"),
-                transaction_type='CustomerPayBillOnline' if fisher_profile.mpesa_payment_type == 'PAYBILL' else 'CustomerBuyGoodsOnline',
+                transaction_type=transaction_type,
             )
             if payment_result.get('success'):
                 PaymentTransaction.objects.create(
@@ -708,11 +713,17 @@ def add_fish(request):
     
     if request.method == 'POST':
         try:
+            uploaded_image = request.FILES.get('image')
+            if uploaded_image and not str(uploaded_image.content_type).startswith('image/'):
+                messages.error(request, 'Please upload a valid image file.')
+                return redirect('fishing:add_fish')
+
             fish = Fish.objects.create(
                 fisherman=request.user,
                 name=request.POST.get('name'),
                 fish_type=request.POST.get('fish_type'),
                 description=request.POST.get('description', ''),
+                image=uploaded_image,
                 price_per_kg=request.POST.get('price_per_kg'),
                 available_weight=request.POST.get('available_weight'),
                 catch_date=request.POST.get('catch_date'),
@@ -748,6 +759,11 @@ def edit_fish(request, fish_id):
     
     if request.method == 'POST':
         old_weight = fish.available_weight
+        uploaded_image = request.FILES.get('image')
+        remove_image = request.POST.get('remove_image') == 'on'
+        if uploaded_image and not str(uploaded_image.content_type).startswith('image/'):
+            messages.error(request, 'Please upload a valid image file.')
+            return redirect('fishing:edit_fish', fish_id=fish.id)
         
         fish.name = request.POST.get('name')
         fish.fish_type = request.POST.get('fish_type')
@@ -759,6 +775,11 @@ def edit_fish(request, fish_id):
         fish.is_organic = 'is_organic' in request.POST
         fish.is_frozen = 'is_frozen' in request.POST
         fish.preparation_notes = request.POST.get('preparation_notes', '')
+        if remove_image and fish.image:
+            fish.image.delete(save=False)
+            fish.image = None
+        if uploaded_image:
+            fish.image = uploaded_image
         fish.save()
         
         # Log changes

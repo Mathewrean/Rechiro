@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from django.test import TestCase
 from django.urls import reverse
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from users.models import User, FishermanProfile, CustomerProfile
 from .models import (
@@ -116,6 +117,31 @@ class CheckoutAndPaymentFlowTests(TestCase):
         self.assertTrue(Order.objects.filter(customer=self.customer).exists())
         profile.refresh_from_db()
         self.assertTrue(profile.is_verified)
+
+    @patch('fishing.views.initiate_stk_push')
+    def test_checkout_uses_paybill_transaction_type_for_stk_push(self, mock_stk):
+        profile = self.fisherman.fisherman_profile
+        profile.mpesa_payment_type = 'STK_PUSH'
+        profile.mpesa_paybill_number = ''
+        profile.mpesa_till_number = ''
+        profile.save(update_fields=['mpesa_payment_type', 'mpesa_paybill_number', 'mpesa_till_number'])
+        mock_stk.return_value = {
+            'success': True,
+            'merchant_request_id': 'MRQ10',
+            'checkout_request_id': 'CRQ10',
+        }
+
+        self.client.login(username='buyer', password='testpass123')
+        cart = Cart.objects.create(user=self.customer)
+        CartItem.objects.create(cart=cart, fish=self.fish, weight_kg=Decimal('1.00'))
+        self.client.post(reverse('fishing:checkout_process'), {
+            'fulfillment_method': 'delivery',
+            'delivery_location': 'Nairobi CBD',
+        })
+
+        self.assertTrue(mock_stk.called)
+        _, kwargs = mock_stk.call_args
+        self.assertEqual(kwargs['transaction_type'], 'CustomerPayBillOnline')
 
     @patch('fishing.views.initiate_stk_push')
     def test_callback_success_marks_fully_paid_and_delivery_in_progress(self, mock_stk):
@@ -269,3 +295,80 @@ class DeliveryAndPickupEndpointsTests(TestCase):
         })
         self.assertEqual(response.status_code, 302)
         self.assertTrue(PickupPoint.objects.filter(name='Kilimani Point').exists())
+
+
+class FishImageUploadTests(TestCase):
+    def setUp(self):
+        self.fisherman = User.objects.create_user(
+            username='imgfisher',
+            password='testpass123',
+            role='fisherman',
+            phone='0700011111',
+            email='imgfisher@example.com',
+        )
+        FishermanProfile.objects.create(
+            user=self.fisherman,
+            phone='0700011111',
+            location='Lake',
+            contact_details='Dock',
+            is_verified=True,
+            mpesa_phone='0700011111',
+        )
+
+    def _tiny_png(self, name='fish.png'):
+        png_bytes = (
+            b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+            b"\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDAT\x08\xd7c\xf8\x0f"
+            b"\x00\x01\x01\x01\x00\x1a\x0b\x04]\x00\x00\x00\x00IEND\xaeB`\x82"
+        )
+        return SimpleUploadedFile(name, png_bytes, content_type='image/png')
+
+    def test_add_fish_accepts_image_upload(self):
+        self.client.login(username='imgfisher', password='testpass123')
+        response = self.client.post(
+            reverse('fishing:add_fish'),
+            {
+                'name': 'Camera Omena',
+                'fish_type': 'other',
+                'description': 'Fresh',
+                'price_per_kg': '400',
+                'available_weight': '4',
+                'catch_date': '2026-02-11',
+                'location': 'Lake',
+                'image': self._tiny_png(),
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        fish = Fish.objects.get(name='Camera Omena')
+        self.assertTrue(bool(fish.image))
+
+    def test_edit_fish_can_replace_image(self):
+        fish = Fish.objects.create(
+            fisherman=self.fisherman,
+            name='Edit Omena',
+            fish_type='other',
+            price_per_kg=Decimal('300.00'),
+            available_weight=Decimal('5.00'),
+            catch_date='2026-02-11',
+            image=self._tiny_png('old.png'),
+        )
+        old_name = fish.image.name
+        self.client.login(username='imgfisher', password='testpass123')
+        response = self.client.post(
+            reverse('fishing:edit_fish', args=[fish.id]),
+            {
+                'name': fish.name,
+                'fish_type': fish.fish_type,
+                'description': fish.description,
+                'price_per_kg': str(fish.price_per_kg),
+                'available_weight': str(fish.available_weight),
+                'catch_date': '2026-02-11',
+                'location': fish.location,
+                'preparation_notes': fish.preparation_notes,
+                'image': self._tiny_png('new.png'),
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        fish.refresh_from_db()
+        self.assertTrue(bool(fish.image))
+        self.assertNotEqual(fish.image.name, old_name)
