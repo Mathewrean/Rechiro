@@ -28,9 +28,9 @@ class UserAdmin(BaseUserAdmin):
 
 @admin.register(FishermanProfile)
 class FishermanProfileAdmin(admin.ModelAdmin):
-    list_display = ('user', 'phone', 'location', 'fulfillment_method', 'is_verified', 'rating', 'total_sales')
-    list_filter = ('fulfillment_method', 'is_verified', 'created_at')
-    search_fields = ('user__username', 'user__email', 'location', 'business_name')
+    list_display = ('user', 'phone', 'location', 'mpesa_payment_type', 'mpesa_phone', 'fulfillment_method', 'is_verified', 'rating', 'total_sales')
+    list_filter = ('fulfillment_method', 'mpesa_payment_type', 'is_verified', 'created_at')
+    search_fields = ('user__username', 'user__email', 'location', 'business_name', 'mpesa_phone', 'mpesa_till_number', 'mpesa_paybill_number')
     raw_id_fields = ('user',)
 
 
@@ -40,4 +40,3 @@ class CustomerProfileAdmin(admin.ModelAdmin):
     list_filter = ('preferred_fulfillment', 'created_at')
     search_fields = ('user__username', 'user__email', 'delivery_location')
     raw_id_fields = ('user',)
-

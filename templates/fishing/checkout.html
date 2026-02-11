@@ -68,7 +68,7 @@
                         <div class="mb-4">
                             <label for="delivery_location" class="block font-semibold text-gray-700 mb-2">Delivery Location *</label>
                             <input type="text" name="delivery_location" id="delivery_location" 
-                                   value="{{ customer_profile.delivery_location|default:'' }}" required
+                                   value="{{ customer_profile.delivery_location|default:'' }}"
                                    placeholder="e.g., Nairobi, Mombasa, Kisumu..."
                                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         </div>
@@ -78,6 +78,17 @@
                             <textarea name="delivery_address" id="delivery_address" rows="3" 
                                       placeholder="House number, street, landmark..."
                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">{{ customer_profile.delivery_address|default:'' }}</textarea>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="pickup_point" class="block font-semibold text-gray-700 mb-2">Pickup Point (for pickup orders)</label>
+                            <select name="pickup_point" id="pickup_point" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="">Select pickup point</option>
+                                {% for point in pickup_points %}
+                                    <option value="{{ point.id }}">{{ point.name }} - {{ point.general_location }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="button" id="load-nearby-points" class="mt-2 text-sm text-blue-600 hover:underline">Use my location to sort nearby pickup points</button>
                         </div>
 
                         <div class="mb-4">
@@ -171,5 +182,30 @@
         </div>
     </div>
 </div>
-{% endblock %}
 
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const loadNearbyBtn = document.getElementById('load-nearby-points');
+    const pickupSelect = document.getElementById('pickup_point');
+    if (!loadNearbyBtn || !pickupSelect || !navigator.geolocation) return;
+
+    loadNearbyBtn.addEventListener('click', function () {
+        navigator.geolocation.getCurrentPosition(function (position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            fetch(`/fishing/customer/pickup-points/?lat=${lat}&lng=${lng}`)
+                .then(resp => resp.json())
+                .then(data => {
+                    pickupSelect.innerHTML = '<option value="">Select pickup point</option>';
+                    (data.pickup_points || []).forEach(point => {
+                        const opt = document.createElement('option');
+                        opt.value = point.id;
+                        opt.textContent = `${point.name} - ${point.general_location}`;
+                        pickupSelect.appendChild(opt);
+                    });
+                });
+        });
+    });
+});
+</script>
+{% endblock %}

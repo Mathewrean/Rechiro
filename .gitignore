@@ -29,7 +29,10 @@ db.sqlite3
 db.sqlite3-journal
 media/
 staticfiles/
-**/migrations/
+
+# Track Django migrations; ignore only cache artifacts
+**/migrations/__pycache__/
+**/migrations/*.pyc
 
 # Environment variables
 .env

@@ -13,6 +13,9 @@ urlpatterns = [
     # Content app removed - e-commerce only
 ]
 
+if getattr(settings, "ALLAUTH_INSTALLED", False):
+    urlpatterns.append(path('accounts/', include('allauth.urls')))
+
 # Media files
 urlpatterns += [
     re_path(r'^media/(?P<path>.*)$', serve, {
@@ -26,4 +29,3 @@ urlpatterns += [
         'document_root': settings.STATIC_ROOT,
     }),
 ]
-

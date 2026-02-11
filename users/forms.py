@@ -66,7 +66,10 @@ class UserLoginForm(AuthenticationForm):
 class FishermanProfileForm(forms.ModelForm):
     class Meta:
         model = FishermanProfile
-        fields = ('phone', 'business_name', 'location', 'address', 'contact_details', 'fulfillment_method')
+        fields = (
+            'phone', 'business_name', 'location', 'address', 'contact_details', 'fulfillment_method',
+            'mpesa_phone', 'mpesa_payment_type', 'mpesa_till_number', 'mpesa_paybill_number', 'mpesa_account_reference'
+        )
         widgets = {
             'address': forms.Textarea(attrs={'rows': 3}),
             'contact_details': forms.Textarea(attrs={'rows': 3}),
@@ -181,4 +184,3 @@ class PasswordChangeForm(forms.Form):
         self.user.set_password(self.cleaned_data['new_password1'])
         self.user.save()
         return self.user
-

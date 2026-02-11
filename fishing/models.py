@@ -1,6 +1,8 @@
 from django.db import models
 from django.conf import settings
 from django.urls import reverse
+from django.core.exceptions import ValidationError
+from decimal import Decimal
 import uuid
 
 
@@ -62,8 +64,9 @@ class Fish(models.Model):
     
     def reduce_stock(self, weight):
         """Reduce available weight after purchase"""
-        if weight <= self.available_weight:
-            self.available_weight -= weight
+        normalized_weight = Decimal(str(weight))
+        if normalized_weight <= self.available_weight:
+            self.available_weight -= normalized_weight
             if self.available_weight <= 0:
                 self.status = 'sold'
             self.save()
@@ -129,6 +132,8 @@ class CartItem(models.Model):
     
     def save(self, *args, **kwargs):
         """Validate weight doesn't exceed available"""
+        if self.weight_kg <= 0:
+            raise ValidationError("Weight must be greater than 0kg.")
         if self.weight_kg > self.fish.available_weight:
             self.weight_kg = self.fish.available_weight
         super().save(*args, **kwargs)
@@ -138,8 +143,11 @@ class Order(models.Model):
     STATUS_CHOICES = [
         ('PENDING', 'Pending Payment'),
         ('PAID', 'Paid'),
+        ('FULLY_PAID', 'Fully Paid'),
+        ('DELIVERY_IN_PROGRESS', 'Delivery In Progress'),
         ('PROCESSING', 'Processing'),
         ('READY', 'Ready for Fulfillment'),
+        ('READY_FOR_PICKUP', 'Ready for Pickup'),
         ('OUT_FOR_DELIVERY', 'Out for Delivery'),
         ('DELIVERED', 'Delivered'),
         ('PICKED_UP', 'Picked Up'),
@@ -151,7 +159,10 @@ class Order(models.Model):
     customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='orders')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     total_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    platform_fee = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    fishermen_net_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     fulfillment_method = models.CharField(max_length=20, default='delivery')
+    pickup_point = models.ForeignKey('PickupPoint', on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
     delivery_location = models.CharField(max_length=200, blank=True)
     delivery_address = models.TextField(blank=True)
     delivery_notes = models.TextField(blank=True)
@@ -170,9 +181,12 @@ class Order(models.Model):
         """Get human-readable status"""
         status_names = {
             'PENDING': 'Pending Payment',
-            'PAID': 'Paid - Processing',
+            'PAID': 'Paid',
+            'FULLY_PAID': 'Fully Paid',
+            'DELIVERY_IN_PROGRESS': 'Delivery In Progress',
             'PROCESSING': 'Being Prepared',
             'READY': 'Ready for Pickup/Delivery',
+            'READY_FOR_PICKUP': 'Ready for Pickup',
             'OUT_FOR_DELIVERY': 'Out for Delivery',
             'DELIVERED': 'Delivered',
             'PICKED_UP': 'Picked Up',
@@ -192,17 +206,25 @@ class Order(models.Model):
         return items_by_fisherman
     
     def mark_as_paid(self, transaction_id=None):
-        """Mark order as paid"""
-        self.status = 'PAID'
+        """Mark order as paid and ready for delivery flow"""
+        self.status = 'FULLY_PAID'
         self.save()
         
         # Deduct stock for each item
         for item in self.items.all():
             item.fish.reduce_stock(item.weight_kg)
-    
+
+    def calculate_financials(self):
+        gross = sum((item.total_price for item in self.items.all()), Decimal('0.00'))
+        fee = (gross * Decimal('0.02')).quantize(Decimal('0.01'))
+        net = (gross - fee).quantize(Decimal('0.01'))
+        self.total_amount = gross
+        self.platform_fee = fee
+        self.fishermen_net_amount = net
+
     def cancel(self):
         """Cancel the order"""
-        if self.status in ['PENDING', 'PAID']:
+        if self.status in ['PENDING', 'PAID', 'FULLY_PAID']:
             self.status = 'CANCELLED'
             self.save()
             return True
@@ -223,6 +245,8 @@ class OrderItem(models.Model):
     weight_kg = models.DecimalField(max_digits=8, decimal_places=2)
     price_per_kg = models.DecimalField(max_digits=10, decimal_places=2)
     total_price = models.DecimalField(max_digits=12, decimal_places=2)
+    platform_fee = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    fisherman_net_payout = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     fulfillment_status = models.CharField(max_length=20, default='PENDING')
     
     def __str__(self):
@@ -230,7 +254,13 @@ class OrderItem(models.Model):
     
     def save(self, *args, **kwargs):
         """Calculate total price before saving"""
-        self.total_price = self.weight_kg * self.price_per_kg
+        if self.weight_kg <= 0:
+            raise ValidationError("Weight must be greater than 0kg.")
+        if self.price_per_kg <= 0:
+            raise ValidationError("Price per kg must be greater than 0.")
+        self.total_price = (self.weight_kg * self.price_per_kg).quantize(Decimal('0.01'))
+        self.platform_fee = (self.total_price * Decimal('0.02')).quantize(Decimal('0.01'))
+        self.fisherman_net_payout = (self.total_price - self.platform_fee).quantize(Decimal('0.01'))
         super().save(*args, **kwargs)
     
     class Meta:
@@ -247,9 +277,16 @@ class PaymentTransaction(models.Model):
     ]
     
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='transactions')
+    order_item = models.ForeignKey(OrderItem, on_delete=models.CASCADE, related_name='transactions', null=True, blank=True)
+    buyer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='buyer_transactions')
+    fisherman = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='fisherman_transactions')
     transaction_id = models.CharField(max_length=100, unique=True)
     mpesa_receipt_number = models.CharField(max_length=100, blank=True)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
+    unit_price_per_kg = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    weight_kg = models.DecimalField(max_digits=8, decimal_places=2, default=Decimal('0.00'))
+    platform_fee = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
+    net_payout = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     phone_number = models.CharField(max_length=20)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     result_code = models.IntegerField(null=True, blank=True)
@@ -270,16 +307,16 @@ class PaymentTransaction(models.Model):
 class Delivery(models.Model):
     STATUS_CHOICES = [
         ('PENDING', 'Pending'),
-        ('READY', 'Ready for Pickup/Delivery'),
-        ('OUT_FOR_DELIVERY', 'Out for Delivery'),
+        ('READY_FOR_PICKUP', 'Ready for Pickup'),
+        ('DELIVERY_IN_PROGRESS', 'Delivery In Progress'),
         ('DELIVERED', 'Delivered'),
-        ('PICKED_UP', 'Picked Up'),
         ('FAILED', 'Delivery Failed'),
     ]
     
     order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='delivery')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     fisherman = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='deliveries')
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='delivery_updates')
     estimated_delivery = models.DateTimeField(null=True, blank=True)
     actual_delivery = models.DateTimeField(null=True, blank=True)
     delivery_person_name = models.CharField(max_length=100, blank=True)
@@ -302,12 +339,15 @@ class FishTransactionLog(models.Model):
     ACTION_CHOICES = [
         ('LISTED', 'Fish Listed'),
         ('PURCHASED', 'Fish Purchased'),
+        ('RESERVED', 'Fish Reserved'),
+        ('STOCK_RELEASED', 'Stock Released'),
+        ('PAYMENT_RECEIVED', 'Payment Received'),
         ('STOCK_ADJUSTED', 'Stock Adjusted'),
         ('STATUS_CHANGED', 'Status Changed'),
         ('DELETED', 'Fish Deleted'),
     ]
     
-    fish = models.ForeignKey(Fish, on_delete=models.CASCADE, related_name='transaction_logs')
+    fish = models.ForeignKey(Fish, on_delete=models.SET_NULL, related_name='transaction_logs', null=True, blank=True)
     action = models.CharField(max_length=20, choices=ACTION_CHOICES)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     weight_change = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
@@ -322,3 +362,28 @@ class FishTransactionLog(models.Model):
         verbose_name_plural = 'Transaction Logs'
         ordering = ['-created_at']
 
+
+class PickupPoint(models.Model):
+    name = models.CharField(max_length=120)
+    general_location = models.CharField(max_length=200)
+    contact_person = models.CharField(max_length=100)
+    phone_number = models.CharField(max_length=20)
+    latitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.general_location})"
+
+
+class DeliveryAuditLog(models.Model):
+    delivery = models.ForeignKey(Delivery, on_delete=models.CASCADE, related_name='audit_logs')
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='delivery_audit_logs')
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    previous_status = models.CharField(max_length=30)
+    new_status = models.CharField(max_length=30)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']

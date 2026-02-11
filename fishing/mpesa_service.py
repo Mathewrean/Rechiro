@@ -53,7 +53,15 @@ class MpesaService:
             logger.error(f"Error getting M-Pesa access token: {str(e)}")
             return None
     
-    def stk_push(self, phone_number, amount, order_number, account_reference):
+    def stk_push(
+        self,
+        phone_number,
+        amount,
+        order_number,
+        account_reference,
+        business_shortcode=None,
+        transaction_type="CustomerPayBillOnline",
+    ):
         """
         Initiate STK Push request to customer's phone
         Args:
@@ -72,14 +80,15 @@ class MpesaService:
             timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
             password = self.generate_password(timestamp)
             
+            shortcode = business_shortcode or self.business_short_code
             payload = {
-                "BusinessShortCode": self.business_short_code,
+                "BusinessShortCode": shortcode,
                 "Password": password,
                 "Timestamp": timestamp,
-                "TransactionType": "CustomerPayBillOnline",
+                "TransactionType": transaction_type,
                 "Amount": str(int(amount)),
                 "PartyA": phone_number,
-                "PartyB": self.business_short_code,
+                "PartyB": shortcode,
                 "PhoneNumber": phone_number,
                 "CallBackURL": self.callback_url,
                 "AccountReference": account_reference,
@@ -289,7 +298,14 @@ class MpesaService:
 
 
 # Convenience function for using M-Pesa service
-def initiate_stk_push(phone_number, amount, order_number):
+def initiate_stk_push(
+    phone_number,
+    amount,
+    order_number,
+    business_shortcode=None,
+    account_reference=None,
+    transaction_type="CustomerPayBillOnline",
+):
     """
     Convenience function to initiate STK Push
     Args:
@@ -307,10 +323,16 @@ def initiate_stk_push(phone_number, amount, order_number):
     elif not phone_number.startswith('254'):
         phone_number = '254' + phone_number
     
-    # Account reference is the order number
-    account_reference = f"ORDER{order_number}"
-    
-    return mpesa.stk_push(phone_number, amount, order_number, account_reference)
+    # Account reference is the order number unless explicitly provided.
+    account_reference = account_reference or f"ORDER{order_number}"
+    return mpesa.stk_push(
+        phone_number,
+        amount,
+        order_number,
+        account_reference,
+        business_shortcode=business_shortcode,
+        transaction_type=transaction_type,
+    )
 
 
 def process_payment_callback(raw_data):
@@ -323,4 +345,3 @@ def process_payment_callback(raw_data):
     """
     print(f"M-Pesa Payment Callback - Raw Data: {raw_data}")
     return MpesaService.parse_callback_data(raw_data)
-

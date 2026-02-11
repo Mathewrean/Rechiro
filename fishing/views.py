@@ -4,15 +4,22 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.db import transaction
+from django.db.models import Sum
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.conf import settings
+from decimal import Decimal
+import logging
 
-from .models import Fish, Cart, CartItem, Order, OrderItem, PaymentTransaction, Delivery, FishTransactionLog
+from .models import (
+    Fish, Cart, CartItem, Order, OrderItem, PaymentTransaction, Delivery, FishTransactionLog,
+    PickupPoint, DeliveryAuditLog
+)
 from .mpesa_service import initiate_stk_push, process_payment_callback
 from users.models import FishermanProfile, CustomerProfile
 
+logger = logging.getLogger(__name__)
 
 def fish_marketplace(request):
     """Display all available fish in Amazon-style grid layout"""
@@ -124,15 +131,15 @@ def add_to_cart(request, fish_id):
     
     if request.method == 'POST':
         try:
-            weight = float(request.POST.get('weight', 1))
+            weight = Decimal(str(request.POST.get('weight', '1')))
         except (ValueError, TypeError):
-            weight = 1
+            weight = Decimal('1')
         
         # Validate weight
-        if weight <= 0:
-            weight = 1
-        if weight > float(fish.available_weight):
-            weight = float(fish.available_weight)
+        if weight <= Decimal('0'):
+            weight = Decimal('1')
+        if weight > fish.available_weight:
+            weight = fish.available_weight
             messages.warning(request, f'Maximum available weight is {fish.available_weight}kg')
         
         # Get or create cart
@@ -195,17 +202,17 @@ def update_cart_item(request, item_id):
     
     if request.method == 'POST':
         try:
-            weight = float(request.POST.get('weight', 1))
+            weight = Decimal(str(request.POST.get('weight', '1')))
         except (ValueError, TypeError):
-            weight = 1
+            weight = Decimal('1')
         
         # Validate weight
-        if weight <= 0:
+        if weight <= Decimal('0'):
             messages.error(request, 'Weight must be greater than 0.')
             return redirect('fishing:cart')
         
-        if weight > float(cart_item.fish.available_weight):
-            weight = float(cart_item.fish.available_weight)
+        if weight > cart_item.fish.available_weight:
+            weight = cart_item.fish.available_weight
             messages.warning(request, f'Maximum available is {cart_item.fish.available_weight}kg')
         
         cart_item.weight_kg = weight
@@ -238,6 +245,9 @@ def checkout_initiate(request):
     if not items:
         messages.error(request, 'Your cart is empty.')
         return redirect('fishing:marketplace')
+    if not request.user.phone:
+        messages.error(request, 'Please add a phone number to your profile.')
+        return redirect('users:edit_profile')
     
     # Validate all items are still available
     for item in items:
@@ -267,20 +277,24 @@ def checkout_initiate(request):
         'total_weight': total_weight,
         'total_price': total_price,
         'customer_profile': customer_profile,
+        'pickup_points': PickupPoint.objects.all().order_by('name'),
     }
     return render(request, 'fishing/checkout.html', context)
 
 
 @login_required
 def checkout_process(request):
-    """Process checkout and initiate M-Pesa payment"""
+    """Process checkout and initiate M-Pesa STK push per fisherman-linked fish item."""
     if request.method != 'POST':
         return redirect('fishing:cart')
     
     try:
         cart = Cart.objects.get(user=request.user)
-        items = cart.items.select_related('fish').all()
+        items = cart.items.select_related('fish', 'fish__fisherman').all()
     except Cart.DoesNotExist:
+        messages.error(request, 'Your cart is empty.')
+        return redirect('fishing:marketplace')
+    if not items:
         messages.error(request, 'Your cart is empty.')
         return redirect('fishing:marketplace')
     
@@ -289,22 +303,50 @@ def checkout_process(request):
     delivery_location = request.POST.get('delivery_location', '')
     delivery_address = request.POST.get('delivery_address', '')
     delivery_notes = request.POST.get('delivery_notes', '')
+    pickup_point_id = request.POST.get('pickup_point')
     
     # Validate customer profile for delivery
     if fulfillment_method == 'delivery':
         if not delivery_location:
             messages.error(request, 'Please provide a delivery location.')
             return redirect('fishing:checkout_initiate')
+    if fulfillment_method == 'pickup' and not pickup_point_id:
+        messages.error(request, 'Please select a pickup point.')
+        return redirect('fishing:checkout_initiate')
     
-    # Calculate totals
-    total_price = sum(item.get_total_price() for item in items)
+    # Validate items and settlement destination.
+    fishermen_profiles = {}
+    for item in items:
+        if item.weight_kg <= Decimal('0'):
+            messages.error(request, f'Invalid weight for {item.fish.name}.')
+            return redirect('fishing:cart')
+        if item.fish.price_per_kg <= Decimal('0'):
+            messages.error(request, f'Invalid price-per-kg for {item.fish.name}.')
+            return redirect('fishing:cart')
+        if item.weight_kg > item.fish.available_weight or not item.fish.is_available():
+            messages.error(request, f'{item.fish.name} is no longer available in requested weight.')
+            return redirect('fishing:cart')
+        try:
+            profile = item.fish.fisherman.fisherman_profile
+        except FishermanProfile.DoesNotExist:
+            messages.error(request, f'Fisherman profile missing for {item.fish.name}.')
+            return redirect('fishing:cart')
+        if not profile.is_verified or not profile.mpesa_phone:
+            messages.error(request, f'Fisherman for {item.fish.name} is not payment-ready.')
+            return redirect('fishing:cart')
+        fishermen_profiles[item.fish.fisherman_id] = profile
+
+    pickup_point = None
+    if pickup_point_id:
+        pickup_point = get_object_or_404(PickupPoint, id=pickup_point_id)
     
     # Create order
     with transaction.atomic():
         order = Order.objects.create(
             customer=request.user,
-            total_amount=total_price,
+            total_amount=Decimal('0.00'),
             fulfillment_method=fulfillment_method,
+            pickup_point=pickup_point,
             delivery_location=delivery_location,
             delivery_address=delivery_address,
             delivery_notes=delivery_notes,
@@ -334,38 +376,66 @@ def checkout_process(request):
                 weight_change=item.weight_kg,
                 notes=f'Reserved for Order #{order.order_number}'
             )
-        
-        # Clear cart
-        cart.delete()
-    
-    # Initiate M-Pesa payment
-    phone_number = request.user.phone
-    if not phone_number:
-        messages.error(request, 'Please add a phone number to your profile.')
-        return redirect('users:edit_profile')
-    
-    payment_result = initiate_stk_push(
-        phone_number=phone_number,
-        amount=float(total_price),
-        order_number=order.order_number
-    )
-    
-    if payment_result.get('success'):
-        # Create payment transaction record
-        PaymentTransaction.objects.create(
-            order=order,
-            transaction_id=payment_result.get('merchant_request_id'),
-            checkout_request_id=payment_result.get('checkout_request_id'),
-            amount=total_price,
-            phone_number=phone_number,
-            status='PENDING'
-        )
-        
-        messages.success(request, 'Payment request sent to your phone. Please enter your PIN to complete payment.')
-        return redirect('fishing:order_detail', order_number=order.order_number)
-    else:
-        messages.error(request, f'Payment initiation failed: {payment_result.get("error")}')
-        # Keep order in PENDING state for retry
+
+        order.calculate_financials()
+        order.save(update_fields=['total_amount', 'platform_fee', 'fishermen_net_amount'])
+
+        # Create payment requests item-by-item to settle directly to each fisherman.
+        payment_errors = []
+        for order_item in order.items.select_related('fisherman', 'fish'):
+            fisher_profile = fishermen_profiles.get(order_item.fisherman_id)
+            payment_result = initiate_stk_push(
+                phone_number=request.user.phone,
+                amount=float(order_item.total_price),
+                order_number=order.order_number,
+                business_shortcode=(fisher_profile.mpesa_paybill_number or fisher_profile.mpesa_till_number or None),
+                account_reference=(fisher_profile.mpesa_account_reference or f"{order.order_number}-{order_item.id}"),
+                transaction_type='CustomerPayBillOnline' if fisher_profile.mpesa_payment_type == 'PAYBILL' else 'CustomerBuyGoodsOnline',
+            )
+            if payment_result.get('success'):
+                PaymentTransaction.objects.create(
+                    order=order,
+                    order_item=order_item,
+                    buyer=request.user,
+                    fisherman=order_item.fisherman,
+                    transaction_id=payment_result.get('merchant_request_id') or f"{order.order_number}-{order_item.id}",
+                    merchant_request_id=payment_result.get('merchant_request_id', ''),
+                    checkout_request_id=payment_result.get('checkout_request_id', ''),
+                    amount=order_item.total_price,
+                    unit_price_per_kg=order_item.price_per_kg,
+                    weight_kg=order_item.weight_kg,
+                    platform_fee=order_item.platform_fee,
+                    net_payout=order_item.fisherman_net_payout,
+                    phone_number=request.user.phone,
+                    status='PENDING',
+                )
+            else:
+                payment_errors.append(f"{order_item.fish_name}: {payment_result.get('error', 'Unknown error')}")
+                PaymentTransaction.objects.create(
+                    order=order,
+                    order_item=order_item,
+                    buyer=request.user,
+                    fisherman=order_item.fisherman,
+                    transaction_id=f"FAILED-{order.order_number}-{order_item.id}",
+                    amount=order_item.total_price,
+                    unit_price_per_kg=order_item.price_per_kg,
+                    weight_kg=order_item.weight_kg,
+                    platform_fee=order_item.platform_fee,
+                    net_payout=order_item.fisherman_net_payout,
+                    phone_number=request.user.phone,
+                    status='FAILED',
+                    result_desc=payment_result.get('error', 'STK push failed'),
+                )
+
+        # Clear cart after creating order + transactions.
+        cart.clear()
+
+        if payment_errors:
+            order.status = 'FAILED'
+            order.save(update_fields=['status', 'updated_at'])
+            messages.error(request, f'One or more STK requests failed: {"; ".join(payment_errors)}')
+        else:
+            messages.success(request, 'STK push sent for each listing. Complete payment prompts on your phone.')
         return redirect('fishing:order_detail', order_number=order.order_number)
 
 
@@ -375,69 +445,102 @@ def mpesa_callback(request):
     if request.method != 'POST':
         return JsonResponse({'status': 'error', 'message': 'Invalid method'}, status=400)
     
-    print(f"M-Pesa Callback Received - Body: {request.body}")
-    
     try:
         raw_data = request.body.decode('utf-8')
         result = process_payment_callback(raw_data)
         
+        checkout_request_id = result.get('checkout_request_id')
+        try:
+            payment_txn = PaymentTransaction.objects.select_related('order', 'order_item').get(
+                checkout_request_id=checkout_request_id
+            )
+        except PaymentTransaction.DoesNotExist:
+            logger.error(f'Transaction not found for checkout_request_id: {checkout_request_id}')
+            return JsonResponse({'status': 'error', 'message': 'Transaction not found'}, status=404)
+
+        order = payment_txn.order
         if result.get('success'):
-            # Find the transaction
-            checkout_request_id = result.get('checkout_request_id')
-            try:
-                transaction = PaymentTransaction.objects.get(checkout_request_id=checkout_request_id)
-                order = transaction.order
-                
-                # Update transaction
-                transaction.mpesa_receipt_number = result.get('transaction_id')
-                transaction.result_code = result.get('result_code')
-                transaction.result_desc = result.get('result_desc')
-                transaction.status = 'COMPLETED'
-                transaction.save()
-                
-                # Update order status
-                order.mark_as_paid(transaction_id=transaction.transaction_id)
-                
-                # Log successful payment
+            callback_amount = result.get('amount')
+            if callback_amount is not None:
+                try:
+                    if Decimal(str(callback_amount)).quantize(Decimal('0.01')) != payment_txn.amount:
+                        payment_txn.status = 'FAILED'
+                        payment_txn.result_desc = 'Amount mismatch in callback validation'
+                        payment_txn.save(update_fields=['status', 'result_desc', 'updated_at'])
+                        return JsonResponse({'status': 'error', 'message': 'Callback amount validation failed'}, status=400)
+                except Exception:
+                    return JsonResponse({'status': 'error', 'message': 'Invalid callback amount'}, status=400)
+
+            payment_txn.mpesa_receipt_number = result.get('transaction_id', '')
+            payment_txn.result_code = result.get('result_code')
+            payment_txn.result_desc = result.get('result_desc', '')
+            payment_txn.status = 'COMPLETED'
+            payment_txn.save()
+
+            if payment_txn.order_item:
+                payment_txn.order_item.fulfillment_status = 'PAID'
+                payment_txn.order_item.save(update_fields=['fulfillment_status'])
                 FishTransactionLog.objects.create(
-                    fish=None,
+                    fish=payment_txn.order_item.fish,
                     action='PAYMENT_RECEIVED',
                     user=order.customer,
-                    notes=f'Payment received: {transaction.mpesa_receipt_number} for Order #{order.order_number}'
-                )
-                
-                return JsonResponse({'status': 'success', 'message': 'Payment processed'})
-            except PaymentTransaction.DoesNotExist:
-                logger.error(f'Transaction not found for checkout_request_id: {checkout_request_id}')
-                return JsonResponse({'status': 'error', 'message': 'Transaction not found'}, status=404)
-        else:
-            # Payment failed
-            checkout_request_id = result.get('checkout_request_id')
-            try:
-                transaction = PaymentTransaction.objects.get(checkout_request_id=checkout_request_id)
-                order = transaction.order
-                
-                transaction.status = 'FAILED'
-                transaction.result_code = result.get('result_code')
-                transaction.result_desc = result.get('result_desc')
-                transaction.save()
-                
-                order.status = 'FAILED'
-                order.save()
-                
-                # Release reserved stock
-                for item in order.items.all():
-                    FishTransactionLog.objects.create(
-                        fish=item.fish,
-                        action='STOCK_RELEASED',
-                        user=order.customer,
-                        weight_change=item.weight_kg,
-                        notes=f'Stock released due to payment failure for Order #{order.order_number}'
+                    weight_change=payment_txn.order_item.weight_kg,
+                    notes=(
+                        f'Buyer={order.customer_id}, Fisherman={payment_txn.fisherman_id}, '
+                        f'Fish={payment_txn.order_item.fish_name}, WeightKg={payment_txn.weight_kg}, '
+                        f'UnitPrice={payment_txn.unit_price_per_kg}, Total={payment_txn.amount}, '
+                        f'PlatformFee={payment_txn.platform_fee}, NetPayout={payment_txn.net_payout}, '
+                        f'MpesaID={payment_txn.mpesa_receipt_number}, Status={payment_txn.status}'
                     )
-                
-                return JsonResponse({'status': 'failed', 'message': result.get('result_desc')})
-            except PaymentTransaction.DoesNotExist:
-                return JsonResponse({'status': 'error', 'message': 'Transaction not found'}, status=404)
+                )
+
+            pending_count = order.transactions.filter(status='PENDING').count()
+            failed_count = order.transactions.filter(status='FAILED').count()
+            if pending_count == 0 and failed_count == 0:
+                order.mark_as_paid(transaction_id=payment_txn.transaction_id)
+                order.status = 'DELIVERY_IN_PROGRESS'
+                order.save(update_fields=['status', 'updated_at'])
+                if order.fulfillment_method == 'pickup':
+                    Delivery.objects.update_or_create(
+                        order=order,
+                        defaults={
+                            'fisherman': payment_txn.fisherman,
+                            'status': 'READY_FOR_PICKUP',
+                            'updated_by': payment_txn.fisherman,
+                        }
+                    )
+                else:
+                    Delivery.objects.update_or_create(
+                        order=order,
+                        defaults={
+                            'fisherman': payment_txn.fisherman,
+                            'status': 'DELIVERY_IN_PROGRESS',
+                            'updated_by': payment_txn.fisherman,
+                        }
+                    )
+                return JsonResponse({'status': 'success', 'message': 'Payment confirmed. Order is fully paid.'})
+
+            # Partial success still considered paid in progress.
+            order.status = 'PAID'
+            order.save(update_fields=['status', 'updated_at'])
+            return JsonResponse({'status': 'success', 'message': 'Payment entry confirmed.'})
+
+        payment_txn.status = 'FAILED'
+        payment_txn.result_code = result.get('result_code')
+        payment_txn.result_desc = result.get('result_desc', '')
+        payment_txn.save()
+        order.status = 'FAILED'
+        order.save(update_fields=['status', 'updated_at'])
+
+        if payment_txn.order_item:
+            FishTransactionLog.objects.create(
+                fish=payment_txn.order_item.fish,
+                action='STOCK_RELEASED',
+                user=order.customer,
+                weight_change=payment_txn.order_item.weight_kg,
+                notes=f'Stock released due to payment failure for Order #{order.order_number}'
+            )
+        return JsonResponse({'status': 'failed', 'message': result.get('result_desc')})
     
     except Exception as e:
         logger.error(f'Error processing M-Pesa callback: {str(e)}')
@@ -452,7 +555,7 @@ def order_detail(request, order_number):
     
     # Get delivery info if exists
     delivery = None
-    if order.status in ['READY', 'OUT_FOR_DELIVERY', 'DELIVERED']:
+    if order.status in ['READY', 'READY_FOR_PICKUP', 'DELIVERY_IN_PROGRESS', 'OUT_FOR_DELIVERY', 'DELIVERED']:
         try:
             delivery = order.delivery
         except Delivery.DoesNotExist:
@@ -516,10 +619,17 @@ def fisherman_dashboard(request):
     from fishing.models import OrderItem
     my_order_items = OrderItem.objects.filter(fisherman=request.user).select_related('order')
     
-    # Calculate stats
-    total_sales_amount = sum(item.total_price for item in my_order_items if item.order.status in ['PAID', 'DELIVERED'])
-    total_items_sold = sum(item.weight_kg for item in my_order_items if item.order.status in ['PAID', 'DELIVERED'])
-    pending_orders = my_order_items.filter(order__status='PAID', fulfillment_status='PENDING').count()
+    # Calculate stats from confirmed payment transactions
+    confirmed_sales = PaymentTransaction.objects.filter(
+        fisherman=request.user,
+        status='COMPLETED'
+    )
+    gross_revenue = confirmed_sales.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    platform_fee_total = confirmed_sales.aggregate(total=Sum('platform_fee'))['total'] or Decimal('0.00')
+    net_earnings = confirmed_sales.aggregate(total=Sum('net_payout'))['total'] or Decimal('0.00')
+    total_sales_amount = gross_revenue
+    total_items_sold = sum(item.weight_kg for item in my_order_items if item.order.status in ['PAID', 'FULLY_PAID', 'DELIVERY_IN_PROGRESS', 'DELIVERED'])
+    pending_orders = my_order_items.filter(order__status__in=['PAID', 'FULLY_PAID', 'DELIVERY_IN_PROGRESS'], fulfillment_status='PENDING').count()
     
     # Recent orders
     recent_orders = my_order_items.order_by('-order__created_at')[:10]
@@ -532,6 +642,9 @@ def fisherman_dashboard(request):
         'my_order_items': my_order_items,
         'recent_orders': recent_orders,
         'total_sales_amount': total_sales_amount,
+        'gross_revenue': gross_revenue,
+        'platform_fee_total': platform_fee_total,
+        'net_earnings': net_earnings,
         'total_items_sold': total_items_sold,
         'pending_orders': pending_orders,
     }
@@ -675,7 +788,7 @@ def order_fulfillment(request):
     from fishing.models import OrderItem
     order_items = OrderItem.objects.filter(
         fisherman=request.user,
-        order__status__in=['PAID', 'PROCESSING', 'READY']
+        order__status__in=['PAID', 'FULLY_PAID', 'DELIVERY_IN_PROGRESS', 'PROCESSING', 'READY', 'READY_FOR_PICKUP']
     ).select_related('order', 'fish').order_by('-order__created_at')
     
     # Group by order
@@ -715,6 +828,9 @@ def update_order_status(request, order_number, item_id):
     
     if request.method == 'POST':
         new_status = request.POST.get('status')
+        if new_status not in ['PENDING', 'READY', 'DELIVERED']:
+            messages.error(request, 'Invalid status update.')
+            return redirect('fishing:order_fulfillment')
         item.fulfillment_status = new_status
         item.save()
         
@@ -722,16 +838,30 @@ def update_order_status(request, order_number, item_id):
         order = item.order
         all_items = order.items.all()
         if all(item.fulfillment_status in ['READY', 'DELIVERED'] for item in all_items):
-            order.status = 'READY'
-            order.save()
+            order.status = 'READY_FOR_PICKUP' if order.fulfillment_method == 'pickup' else 'DELIVERY_IN_PROGRESS'
+            order.save(update_fields=['status', 'updated_at'])
             
             # Create delivery record
-            if order.fulfillment_method == 'delivery':
-                Delivery.objects.create(
-                    order=order,
-                    fisherman=request.user,
-                    status='READY'
-                )
+            delivery_obj, _ = Delivery.objects.get_or_create(
+                order=order,
+                defaults={
+                    'fisherman': request.user,
+                    'status': 'READY_FOR_PICKUP' if order.fulfillment_method == 'pickup' else 'DELIVERY_IN_PROGRESS',
+                    'updated_by': request.user,
+                }
+            )
+            previous_status = delivery_obj.status
+            delivery_obj.status = 'READY_FOR_PICKUP' if order.fulfillment_method == 'pickup' else 'DELIVERY_IN_PROGRESS'
+            delivery_obj.updated_by = request.user
+            delivery_obj.save(update_fields=['status', 'updated_by', 'updated_at'])
+            DeliveryAuditLog.objects.create(
+                delivery=delivery_obj,
+                order=order,
+                updated_by=request.user,
+                previous_status=previous_status,
+                new_status=delivery_obj.status,
+                notes='Order prepared by fisherman',
+            )
         
         messages.success(request, f'Updated status for order item.')
         return redirect('fishing:order_fulfillment')
@@ -763,7 +893,7 @@ def customer_dashboard(request):
     
     # Stats
     total_orders = orders.count()
-    pending_orders = orders.filter(status__in=['PENDING', 'PAID', 'PROCESSING']).count()
+    pending_orders = orders.filter(status__in=['PENDING', 'PAID', 'FULLY_PAID', 'DELIVERY_IN_PROGRESS', 'PROCESSING']).count()
     completed_orders = orders.filter(status='DELIVERED').count()
     
     context = {
@@ -793,6 +923,7 @@ def delivery_tracking(request, order_number):
     context = {
         'order': order,
         'delivery': delivery,
+        'audit_logs': delivery.audit_logs.all() if delivery else [],
     }
     return render(request, 'fishing/delivery_tracking.html', context)
 
@@ -804,13 +935,23 @@ def confirm_delivery(request, order_number):
     
     if request.method == 'POST':
         order.status = 'DELIVERED'
-        order.save()
+        order.save(update_fields=['status', 'updated_at'])
         
         try:
             delivery = order.delivery
+            previous_status = delivery.status
             delivery.status = 'DELIVERED'
             delivery.actual_delivery = timezone.now()
-            delivery.save()
+            delivery.updated_by = request.user
+            delivery.save(update_fields=['status', 'actual_delivery', 'updated_by', 'updated_at'])
+            DeliveryAuditLog.objects.create(
+                delivery=delivery,
+                order=order,
+                updated_by=request.user,
+                previous_status=previous_status,
+                new_status='DELIVERED',
+                notes='Customer confirmed delivery',
+            )
         except Delivery.DoesNotExist:
             pass
         
@@ -821,6 +962,75 @@ def confirm_delivery(request, order_number):
     return render(request, 'fishing/confirm_delivery.html', context)
 
 
+@login_required
+@require_http_methods(['GET'])
+def pickup_points_api(request):
+    """Return pickup points; optionally sorted by approximate distance if user location is provided."""
+    latitude = request.GET.get('lat')
+    longitude = request.GET.get('lng')
+    points = PickupPoint.objects.all()
+    payload = []
+    for point in points:
+        payload.append({
+            'id': point.id,
+            'name': point.name,
+            'general_location': point.general_location,
+            'contact_person': point.contact_person,
+            'phone_number': point.phone_number,
+            'latitude': float(point.latitude) if point.latitude is not None else None,
+            'longitude': float(point.longitude) if point.longitude is not None else None,
+        })
+    # Optional location is accepted for clients that request user consent on device.
+    if latitude and longitude:
+        try:
+            lat = float(latitude)
+            lng = float(longitude)
+            for point in payload:
+                if point['latitude'] is not None and point['longitude'] is not None:
+                    point['distance_hint'] = abs(lat - point['latitude']) + abs(lng - point['longitude'])
+                else:
+                    point['distance_hint'] = 999999
+            payload = sorted(payload, key=lambda p: p['distance_hint'])
+        except ValueError:
+            pass
+    return JsonResponse({'pickup_points': payload})
+
+
+@login_required
+@require_http_methods(['POST'])
+def delivery_status_update(request, order_number):
+    """Delivery/pickup role updates status from ready-for-pickup to delivered."""
+    if request.user.role not in ['delivery', 'admin']:
+        return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
+
+    order = get_object_or_404(Order, order_number=order_number)
+    delivery = get_object_or_404(Delivery, order=order)
+    new_status = request.POST.get('status')
+    if new_status not in ['READY_FOR_PICKUP', 'DELIVERED']:
+        return JsonResponse({'success': False, 'error': 'Invalid status'}, status=400)
+
+    previous_status = delivery.status
+    delivery.status = new_status
+    delivery.updated_by = request.user
+    if new_status == 'DELIVERED':
+        delivery.actual_delivery = timezone.now()
+        order.status = 'DELIVERED'
+    else:
+        order.status = 'READY_FOR_PICKUP'
+    delivery.save(update_fields=['status', 'updated_by', 'actual_delivery', 'updated_at'])
+    order.save(update_fields=['status', 'updated_at'])
+
+    DeliveryAuditLog.objects.create(
+        delivery=delivery,
+        order=order,
+        updated_by=request.user,
+        previous_status=previous_status,
+        new_status=new_status,
+        notes='Updated by delivery role',
+    )
+    return JsonResponse({'success': True, 'status': new_status})
+
+
 # API Views
 @login_required
 @require_http_methods(['POST'])
@@ -829,11 +1039,11 @@ def api_add_to_cart(request, fish_id):
     fish = get_object_or_404(Fish, id=fish_id)
     
     try:
-        weight = float(request.POST.get('weight', 1))
+        weight = Decimal(str(request.POST.get('weight', '1')))
     except (ValueError, TypeError):
         return JsonResponse({'success': False, 'error': 'Invalid weight'})
     
-    if weight <= 0 or weight > float(fish.available_weight):
+    if weight <= Decimal('0') or weight > fish.available_weight:
         return JsonResponse({'success': False, 'error': 'Invalid weight'})
     
     cart, created = Cart.objects.get_or_create(user=request.user)
@@ -876,4 +1086,3 @@ def marketplace_home(request):
         'featured_fish': featured_fish,
     }
     return render(request, 'fishing/marketplace_home.html', context)
-

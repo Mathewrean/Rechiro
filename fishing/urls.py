@@ -38,6 +38,8 @@ urlpatterns = [
     path('customer/dashboard/', views.customer_dashboard, name='customer_dashboard'),
     path('customer/orders/<str:order_number>/tracking/', views.delivery_tracking, name='delivery_tracking'),
     path('customer/orders/<str:order_number>/confirm/', views.confirm_delivery, name='confirm_delivery'),
+    path('customer/pickup-points/', views.pickup_points_api, name='pickup_points_api'),
+    path('delivery/orders/<str:order_number>/status/', views.delivery_status_update, name='delivery_status_update'),
     
     # API
     path('api/cart/add/<int:fish_id>/', views.api_add_to_cart, name='api_add_to_cart'),
@@ -46,4 +48,3 @@ urlpatterns = [
     # Home
     path('home/', views.marketplace_home, name='home'),
 ]
-

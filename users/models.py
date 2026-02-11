@@ -7,6 +7,7 @@ class User(AbstractUser):
     ROLE_CHOICES = [
         ('fisherman', 'Fisherman'),
         ('customer', 'Customer'),
+        ('delivery', 'Delivery / Pickup'),
         ('admin', 'Admin'),
     ]
     
@@ -46,6 +47,12 @@ class FishermanProfile(models.Model):
         ('delivery', 'Delivery Only'),
         ('both', 'Pickup and Delivery'),
     ]
+
+    MPESA_PAYMENT_TYPE_CHOICES = [
+        ('STK_PUSH', 'STK Push'),
+        ('TILL', 'Till'),
+        ('PAYBILL', 'Paybill'),
+    ]
     
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='fisherman_profile')
     phone = models.CharField(max_length=20)
@@ -55,6 +62,11 @@ class FishermanProfile(models.Model):
     contact_details = models.TextField(help_text="Additional contact information")
     fulfillment_method = models.CharField(max_length=20, choices=FULFILLMENT_CHOICES, default='both')
     is_verified = models.BooleanField(default=False, help_text="Whether the fisherman is verified")
+    mpesa_phone = models.CharField(max_length=20, blank=True, help_text="M-Pesa phone in local or 254 format")
+    mpesa_payment_type = models.CharField(max_length=20, choices=MPESA_PAYMENT_TYPE_CHOICES, default='STK_PUSH')
+    mpesa_till_number = models.CharField(max_length=20, blank=True)
+    mpesa_paybill_number = models.CharField(max_length=20, blank=True)
+    mpesa_account_reference = models.CharField(max_length=50, blank=True)
     rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.00)
     total_sales = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -90,4 +102,3 @@ class CustomerProfile(models.Model):
     class Meta:
         verbose_name = 'Customer Profile'
         verbose_name_plural = 'Customer Profiles'
-
