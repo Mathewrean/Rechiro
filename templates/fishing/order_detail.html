@@ -105,43 +105,38 @@
                         <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200"></div>
                         
                         <div class="relative pl-10 pb-6">
-                            <div class="absolute left-2 w-5 h-5 rounded-full {% if delivery.status != 'PENDING' %}bg-green-500{% else %}bg-gray-300{% endif %}"></div>
+                            <div class="absolute left-2 w-5 h-5 rounded-full bg-green-500"></div>
                             <p class="font-semibold text-gray-800">Order Placed</p>
                             <p class="text-sm text-gray-500">{{ order.created_at|date:"M d, Y H:i" }}</p>
                         </div>
                         
                         <div class="relative pl-10 pb-6">
-                            <div class="absolute left-2 w-5 h-5 rounded-full {% if delivery.status in 'READY,OUT_FOR_DELIVERY,DELIVERED,PICKED_UP' %}bg-green-500{% else %}bg-gray-300{% endif %}"></div>
-                            <p class="font-semibold text-gray-800">Ready for Fulfillment</p>
+                            <div class="absolute left-2 w-5 h-5 rounded-full {% if delivery.status in 'ASSIGNED,PICKED_UP,IN_TRANSIT,DELIVERED' %}bg-green-500{% elif delivery.status == 'FAILED' %}bg-red-500{% else %}bg-gray-300{% endif %}"></div>
+                            <p class="font-semibold text-gray-800">Assigned</p>
                             <p class="text-sm text-gray-500">
                                 {% if delivery.estimated_delivery %}
                                 Est: {{ delivery.estimated_delivery|date:"M d, Y H:i" }}
                                 {% else %}
-                                Awaiting preparation
+                                Delivery agent assigned
                                 {% endif %}
                             </p>
                         </div>
                         
                         <div class="relative pl-10 pb-6">
-                            <div class="absolute left-2 w-5 h-5 rounded-full {% if delivery.status in 'OUT_FOR_DELIVERY,DELIVERED,PICKED_UP' %}bg-green-500{% else %}bg-gray-300{% endif %}"></div>
-                            <p class="font-semibold text-gray-800">
-                                {% if order.fulfillment_method == 'pickup' %}
-                                Ready for Pickup
-                                {% else %}
-                                Out for Delivery
-                                {% endif %}
-                            </p>
+                            <div class="absolute left-2 w-5 h-5 rounded-full {% if delivery.status in 'PICKED_UP,IN_TRANSIT,DELIVERED' %}bg-green-500{% elif delivery.status == 'FAILED' %}bg-red-500{% else %}bg-gray-300{% endif %}"></div>
+                            <p class="font-semibold text-gray-800">Picked Up</p>
+                            <p class="text-sm text-gray-500">Order collected from fisherman</p>
+                        </div>
+
+                        <div class="relative pl-10 pb-6">
+                            <div class="absolute left-2 w-5 h-5 rounded-full {% if delivery.status in 'IN_TRANSIT,DELIVERED' %}bg-green-500{% elif delivery.status == 'FAILED' %}bg-red-500{% else %}bg-gray-300{% endif %}"></div>
+                            <p class="font-semibold text-gray-800">In Transit</p>
+                            <p class="text-sm text-gray-500">Driver is on the way</p>
                         </div>
                         
                         <div class="relative pl-10">
-                            <div class="absolute left-2 w-5 h-5 rounded-full {% if delivery.status == 'DELIVERED' or delivery.status == 'PICKED_UP' %}bg-green-500{% else %}bg-gray-300{% endif %}"></div>
-                            <p class="font-semibold text-gray-800">
-                                {% if order.fulfillment_method == 'pickup' %}
-                                Picked Up
-                                {% else %}
-                                Delivered
-                                {% endif %}
-                            </p>
+                            <div class="absolute left-2 w-5 h-5 rounded-full {% if delivery.status == 'DELIVERED' %}bg-green-500{% elif delivery.status == 'FAILED' %}bg-red-500{% else %}bg-gray-300{% endif %}"></div>
+                            <p class="font-semibold text-gray-800">Delivered</p>
                             {% if delivery.actual_delivery %}
                             <p class="text-sm text-gray-500">{{ delivery.actual_delivery|date:"M d, Y H:i" }}</p>
                             {% endif %}
@@ -225,4 +220,3 @@
     </div>
 </div>
 {% endblock %}
-

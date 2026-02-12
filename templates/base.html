@@ -46,6 +46,58 @@
         main form button[type="submit"] {
             border-radius: 0.75rem;
         }
+        .form-panel label {
+            font-weight: 600 !important;
+            color: #1f2937 !important;
+        }
+        .form-panel input[type="text"],
+        .form-panel input[type="email"],
+        .form-panel input[type="password"],
+        .form-panel input[type="number"],
+        .form-panel input[type="date"],
+        .form-panel input[type="tel"],
+        .form-panel input[type="url"],
+        .form-panel select,
+        .form-panel textarea {
+            width: 100% !important;
+            padding: 0.85rem 1rem !important;
+            border: 1px solid #e2e8f0 !important;
+            border-radius: 0.9rem !important;
+            background: #f8fafc !important;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06) !important;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease !important;
+        }
+        .form-panel input[type="text"]:focus,
+        .form-panel input[type="email"]:focus,
+        .form-panel input[type="password"]:focus,
+        .form-panel input[type="number"]:focus,
+        .form-panel input[type="date"]:focus,
+        .form-panel input[type="tel"]:focus,
+        .form-panel input[type="url"]:focus,
+        .form-panel select:focus,
+        .form-panel textarea:focus {
+            outline: none !important;
+            border-color: #0066cc !important;
+            box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.18) !important;
+            background: #ffffff !important;
+        }
+        .form-panel .form-help {
+            margin-top: 0.4rem;
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+        .form-panel .form-error {
+            margin-top: 0.4rem;
+            font-size: 0.85rem;
+            color: #dc2626;
+        }
+        .form-panel .form-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+            justify-content: flex-end;
+        }
     </style>
     <script>
         tailwind.config = {
@@ -107,6 +159,11 @@
                             <a href="{% url 'fishing:customer_dashboard' %}" class="text-white/90 hover:text-white hover:bg-white/10 px-3 py-2 rounded-md font-medium transition-all duration-300">
                                 <i class="fas fa-tachometer-alt mr-1"></i>Dashboard
                             </a>
+                        {% endif %}
+                        {% if user.role == 'delivery' %}
+                        <a href="{% url 'fishing:delivery_dashboard' %}" class="text-white/90 hover:text-white hover:bg-white/10 px-3 py-2 rounded-md font-medium transition-all duration-300">
+                            <i class="fas fa-truck mr-1"></i>Deliveries
+                        </a>
                         {% endif %}
                         <a href="{% url 'fishing:order_list' %}" class="text-white/90 hover:text-white hover:bg-white/10 px-3 py-2 rounded-md font-medium transition-all duration-300">
                             <i class="fas fa-clipboard-list mr-1"></i>Orders
@@ -210,6 +267,11 @@
                         {% else %}
                         <a href="{% url 'fishing:customer_dashboard' %}" class="flex items-center text-white/90 hover:text-white hover:bg-white/10 px-3 py-3 rounded-md font-medium transition-all duration-300">
                             <i class="fas fa-tachometer-alt mr-3 w-5"></i>Dashboard
+                        </a>
+                        {% endif %}
+                        {% if user.role == 'delivery' %}
+                        <a href="{% url 'fishing:delivery_dashboard' %}" class="flex items-center text-white/90 hover:text-white hover:bg-white/10 px-3 py-3 rounded-md font-medium transition-all duration-300">
+                            <i class="fas fa-truck mr-3 w-5"></i>Deliveries
                         </a>
                         {% endif %}
                         <a href="{% url 'fishing:order_list' %}" class="flex items-center text-white/90 hover:text-white hover:bg-white/10 px-3 py-3 rounded-md font-medium transition-all duration-300">

@@ -157,7 +157,7 @@ class Order(models.Model):
     
     order_number = models.CharField(max_length=20, unique=True, default=generate_order_number)
     customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='orders')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ASSIGNED')
     total_amount = models.DecimalField(max_digits=12, decimal_places=2)
     platform_fee = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     fishermen_net_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
@@ -306,9 +306,9 @@ class PaymentTransaction(models.Model):
 
 class Delivery(models.Model):
     STATUS_CHOICES = [
-        ('PENDING', 'Pending'),
-        ('READY_FOR_PICKUP', 'Ready for Pickup'),
-        ('DELIVERY_IN_PROGRESS', 'Delivery In Progress'),
+        ('ASSIGNED', 'Assigned'),
+        ('PICKED_UP', 'Picked Up'),
+        ('IN_TRANSIT', 'In Transit'),
         ('DELIVERED', 'Delivered'),
         ('FAILED', 'Delivery Failed'),
     ]
@@ -316,6 +316,13 @@ class Delivery(models.Model):
     order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='delivery')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
     fisherman = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='deliveries')
+    assigned_agent = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_deliveries'
+    )
     updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='delivery_updates')
     estimated_delivery = models.DateTimeField(null=True, blank=True)
     actual_delivery = models.DateTimeField(null=True, blank=True)
@@ -323,6 +330,8 @@ class Delivery(models.Model):
     delivery_person_phone = models.CharField(max_length=20, blank=True)
     delivery_notes = models.TextField(blank=True)
     signature_image = models.ImageField(upload_to='delivery_signatures/', blank=True, null=True)
+    proof_image = models.ImageField(upload_to='delivery_proofs/', blank=True, null=True)
+    confirmation_code = models.CharField(max_length=12, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -383,6 +392,23 @@ class DeliveryAuditLog(models.Model):
     previous_status = models.CharField(max_length=30)
     new_status = models.CharField(max_length=30)
     notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+
+class UserNotification(models.Model):
+    TYPE_CHOICES = [
+        ('DELIVERY', 'Delivery'),
+        ('ADMIN_ALERT', 'Admin Alert'),
+    ]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='user_notifications')
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='user_notifications')
+    notification_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='DELIVERY')
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

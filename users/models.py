@@ -8,7 +8,7 @@ class User(AbstractUser):
         ('fisherman', 'Fisherman'),
         ('customer', 'Customer'),
         ('chairman', 'Beach Chairman'),
-        ('delivery', 'Delivery / Pickup'),
+        ('delivery', 'Delivery Agent'),
         ('admin', 'Admin'),
     ]
     

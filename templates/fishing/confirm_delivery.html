@@ -24,8 +24,12 @@
                 <p class="text-sm text-gray-500 mt-2">{{ order.items.count }} items • {{ order.fulfillment_method }}</p>
             </div>
 
-            <form method="POST" class="space-y-4">
+            <form method="POST" class="space-y-4 form-panel">
                 {% csrf_token %}
+                <div>
+                    <label for="confirmation_code" class="block text-sm font-semibold text-gray-700 mb-2">Confirmation Code (optional)</label>
+                    <input type="text" id="confirmation_code" name="confirmation_code" placeholder="Enter delivery code if provided">
+                </div>
                 <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-bold text-lg transition-colors">
                     <i class="fas fa-check-circle mr-2"></i>
                     {% if order.fulfillment_method == 'delivery' %}
@@ -46,4 +50,3 @@
     </div>
 </div>
 {% endblock %}
-

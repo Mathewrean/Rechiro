@@ -11,7 +11,7 @@
                 <p class="text-slate-600 mt-2">We imported your Google account. Fill in the missing details.</p>
             </div>
 
-            <form method="post" class="space-y-5">
+            <form method="post" class="space-y-5 form-panel">
                 {% csrf_token %}
                 {% for hidden in form.hidden_fields %}
                     {{ hidden }}

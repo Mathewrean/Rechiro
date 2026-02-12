@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+
+{% block title %}Delivery Dashboard - FishNet{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="container mx-auto px-4">
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">
+                    <i class="fas fa-truck mr-3 text-blue-600"></i>Delivery Dashboard
+                </h1>
+                <p class="text-gray-500 mt-1">Manage assigned deliveries and status updates</p>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <p class="text-sm text-gray-500">Assigned</p>
+                <p class="text-3xl font-bold text-gray-800">{{ total_assigned }}</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <p class="text-sm text-gray-500">Completed</p>
+                <p class="text-3xl font-bold text-green-600">{{ completed_deliveries }}</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <p class="text-sm text-gray-500">Pending</p>
+                <p class="text-3xl font-bold text-yellow-600">{{ pending_deliveries }}</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <p class="text-sm text-gray-500">Failed</p>
+                <p class="text-3xl font-bold text-red-600">{{ failed_deliveries }}</p>
+            </div>
+        </div>
+
+        <div class="grid lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Assigned Orders -->
+                <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                    <div class="p-6 border-b border-gray-200">
+                        <h2 class="text-xl font-bold text-gray-800">Assigned Orders</h2>
+                    </div>
+                    {% if assigned_deliveries %}
+                    <div class="divide-y divide-gray-200">
+                        {% for card in assigned_deliveries %}
+                        <div class="p-6">
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                    <p class="text-sm text-gray-500">Order</p>
+                                    <p class="text-lg font-semibold text-gray-900">#{{ card.order.order_number }}</p>
+                                </div>
+                                <div class="text-sm">
+                                    <span class="px-3 py-1 rounded-full text-xs font-semibold
+                                        {% if card.delivery.status == 'DELIVERED' %}bg-green-100 text-green-700
+                                        {% elif card.delivery.status == 'FAILED' %}bg-red-100 text-red-700
+                                        {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                                        {{ card.delivery.get_status_display }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="grid md:grid-cols-2 gap-4 mt-4 text-sm text-gray-600">
+                                <div>
+                                    <p class="text-gray-400">Customer</p>
+                                    <p class="text-gray-800 font-medium">{{ card.customer.full_name|default:card.customer.username }}</p>
+                                    <p>{{ card.order.customer_phone }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-400">Fisherman</p>
+                                    <p class="text-gray-800 font-medium">
+                                        {% if card.fisherman %}
+                                        {{ card.fisherman.full_name|default:card.fisherman.username }}
+                                        {% else %}
+                                        Not set
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-400">Pickup Location</p>
+                                    <p class="text-gray-800 font-medium">{{ card.pickup_location }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-400">Delivery Location</p>
+                                    <p class="text-gray-800 font-medium">{{ card.order.delivery_location|default:"Not set" }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-400">Order Status</p>
+                                    <p class="text-gray-800 font-medium">{{ card.order.get_status_display_name }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-400">Payment</p>
+                                    <p class="text-gray-800 font-medium">
+                                        {% if card.payment_confirmed %}Confirmed{% else %}Pending{% endif %}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <form method="post" action="{% url 'fishing:delivery_status_update' card.order.order_number %}" enctype="multipart/form-data" class="mt-6 form-panel">
+                                {% csrf_token %}
+                                <div class="grid md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="status_{{ card.order.order_number }}">Update Status</label>
+                                        <select id="status_{{ card.order.order_number }}" name="status">
+                                            <option value="ASSIGNED" {% if card.delivery.status == 'ASSIGNED' %}selected{% endif %}>Assigned</option>
+                                            <option value="PICKED_UP" {% if card.delivery.status == 'PICKED_UP' %}selected{% endif %}>Picked Up</option>
+                                            <option value="IN_TRANSIT" {% if card.delivery.status == 'IN_TRANSIT' %}selected{% endif %}>In Transit</option>
+                                            <option value="DELIVERED" {% if card.delivery.status == 'DELIVERED' %}selected{% endif %}>Delivered</option>
+                                            <option value="FAILED" {% if card.delivery.status == 'FAILED' %}selected{% endif %}>Failed</option>
+                                        </select>
+                                        <p class="form-help">Delivered requires proof image or confirmation code.</p>
+                                    </div>
+                                    <div>
+                                        <label for="code_{{ card.order.order_number }}">Confirmation Code (optional)</label>
+                                        <input type="text" id="code_{{ card.order.order_number }}" name="confirmation_code" placeholder="Enter delivery code">
+                                    </div>
+                                    <div class="md:col-span-2">
+                                        <label for="proof_{{ card.order.order_number }}">Proof Image (optional)</label>
+                                        <input type="file" id="proof_{{ card.order.order_number }}" name="proof_image" accept="image/*">
+                                    </div>
+                                </div>
+                                <div class="form-actions mt-4">
+                                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold">
+                                        Update Status
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="p-8 text-center text-gray-500">
+                        <i class="fas fa-clipboard-check text-4xl text-gray-300 mb-3"></i>
+                        <p>No assigned deliveries yet.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Unassigned Orders -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4">Unassigned Deliveries</h2>
+                    {% if unassigned_deliveries %}
+                    <div class="space-y-4">
+                        {% for card in unassigned_deliveries %}
+                        <div class="border border-gray-200 rounded-lg p-4">
+                            <p class="text-sm text-gray-500">Order</p>
+                            <p class="font-semibold text-gray-900">#{{ card.order.order_number }}</p>
+                            <p class="text-xs text-gray-500 mt-2">Pickup: {{ card.pickup_location }}</p>
+                            <form method="post" action="{% url 'fishing:delivery_claim' card.order.order_number %}" class="mt-3">
+                                {% csrf_token %}
+                                <button type="submit" class="w-full bg-gray-900 hover:bg-gray-800 text-white py-2 rounded-lg text-sm font-semibold">
+                                    Assign to Me
+                                </button>
+                            </form>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-sm text-gray-500">No unassigned deliveries.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

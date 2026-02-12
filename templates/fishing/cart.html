@@ -41,7 +41,7 @@
 
                             <!-- Weight Control -->
                             <div class="flex items-center gap-2">
-                                <form method="POST" action="{% url 'fishing:update_cart_item' item.id %}" class="flex items-center gap-2">
+                                <form method="POST" action="{% url 'fishing:update_cart_item' item.id %}" class="flex items-center gap-2 form-panel">
                                     {% csrf_token %}
                                     <input type="number" name="weight" value="{{ item.weight_kg }}" min="0.1" max="{{ item.fish.available_weight }}" step="0.1" 
                                            class="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-blue-500">

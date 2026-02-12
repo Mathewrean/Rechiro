@@ -73,7 +73,7 @@
                     <p class="text-amber-800 mb-4">
                         You need to verify your email before checkout.
                     </p>
-                    <form method="post" action="{% url 'users:resend_email_verification' %}">
+                    <form method="post" action="{% url 'users:resend_email_verification' %}" class="form-panel">
                         {% csrf_token %}
                         <button type="submit" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg font-medium">
                             Send Verification Email

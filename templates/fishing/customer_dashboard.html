@@ -142,6 +142,28 @@
                     </a>
                 </div>
 
+                <!-- Notifications -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-bold text-gray-800">Notifications</h2>
+                        {% if unread_notifications %}
+                        <span class="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-1 rounded-full">{{ unread_notifications }} new</span>
+                        {% endif %}
+                    </div>
+                    {% if notifications %}
+                    <div class="space-y-3">
+                        {% for note in notifications %}
+                        <div class="p-3 rounded-lg border {% if note.is_read %}border-gray-100 bg-gray-50{% else %}border-blue-100 bg-blue-50{% endif %}">
+                            <p class="text-sm text-gray-700">{{ note.message }}</p>
+                            <p class="text-xs text-gray-500 mt-1">{{ note.created_at|date:"M d, Y H:i" }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-sm text-gray-500">No delivery updates yet.</p>
+                    {% endif %}
+                </div>
+
                 <!-- Delivery Address -->
                 <div class="bg-white rounded-xl shadow-sm p-6">
                     <h2 class="text-lg font-bold text-gray-800 mb-4">Delivery Address</h2>
@@ -169,4 +191,3 @@
     </div>
 </div>
 {% endblock %}
-

@@ -45,6 +45,8 @@ urlpatterns = [
     path('customer/orders/<str:order_number>/confirm/', views.confirm_delivery, name='confirm_delivery'),
     path('pickup-points/manage/', views.manage_pickup_points, name='manage_pickup_points'),
     path('customer/pickup-points/', views.pickup_points_api, name='pickup_points_api'),
+    path('delivery/dashboard/', views.delivery_dashboard, name='delivery_dashboard'),
+    path('delivery/orders/<str:order_number>/claim/', views.delivery_claim, name='delivery_claim'),
     path('delivery/orders/<str:order_number>/status/', views.delivery_status_update, name='delivery_status_update'),
     
     # API

@@ -3,112 +3,144 @@
 {% block title %}Login - Sustainable Fishing{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gradient-to-br from-blue-50 to-accent/20 py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-md w-full mx-auto space-y-8">
-        <!-- Header -->
-        <div class="text-center">
-            <div class="mx-auto h-16 w-16 bg-gradient-to-r from-primary to-secondary rounded-full flex items-center justify-center shadow-lg">
-                <i class="fas fa-fish text-white text-2xl"></i>
-            </div>
-            <h2 class="mt-6 text-3xl font-bold text-gray-900">
-                Welcome back
-            </h2>
-            <p class="mt-2 text-sm text-gray-600">
-                Sign in to your Sustainable Fishing account
-            </p>
-        </div>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+    .login-font-body { font-family: 'Space Grotesk', sans-serif; }
+    .login-font-display { font-family: 'Fraunces', serif; letter-spacing: -0.01em; }
+</style>
 
-        <!-- Login Form -->
-        <div class="bg-white rounded-2xl shadow-xl p-8">
-            <form method="post" class="space-y-6">
-                {% csrf_token %}
-                
-                <div>
-                    <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-user text-primary mr-2"></i>Username
-                    </label>
-                    <input type="text" 
-                           name="{{ form.username.name }}" 
-                           id="{{ form.username.id_for_label }}"
-                           value="{{ form.username.value|default:'' }}"
-                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 placeholder-gray-400"
-                           placeholder="Enter your username"
-                           required>
-                    {% if form.username.errors %}
-                        <div class="mt-1 text-sm text-red-600">
-                            <i class="fas fa-exclamation-circle mr-1"></i>
-                            {{ form.username.errors.0 }}
-                        </div>
-                    {% endif %}
-                </div>
-                
-                <div>
-                    <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                        <i class="fas fa-lock text-primary mr-2"></i>Password
-                    </label>
-                    <input type="password" 
-                           name="{{ form.password.name }}" 
-                           id="{{ form.password.id_for_label }}"
-                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 placeholder-gray-400"
-                           placeholder="Enter your password"
-                           required>
-                    {% if form.password.errors %}
-                        <div class="mt-1 text-sm text-red-600">
-                            <i class="fas fa-exclamation-circle mr-1"></i>
-                            {{ form.password.errors.0 }}
-                        </div>
-                    {% endif %}
-                </div>
-                
-                {% if form.non_field_errors %}
-                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
-                        <div class="text-sm text-red-700">
-                            <i class="fas fa-exclamation-triangle mr-2"></i>
-                            {{ form.non_field_errors.0 }}
-                        </div>
+<div class="min-h-screen login-font-body bg-[#061725] text-white relative overflow-hidden">
+    <div class="absolute -top-40 -left-32 h-96 w-96 bg-[#00b4d8]/30 blur-3xl rounded-full"></div>
+    <div class="absolute top-20 -right-32 h-[28rem] w-[28rem] bg-[#3dd5a8]/20 blur-3xl rounded-full"></div>
+    <div class="absolute bottom-0 left-1/2 h-80 w-80 -translate-x-1/2 bg-[#ffd166]/10 blur-3xl rounded-full"></div>
+
+    <div class="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
+        <div class="grid lg:grid-cols-[1.15fr_0.85fr] gap-10 items-stretch">
+            <div class="rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 via-white/5 to-transparent p-8 sm:p-12 shadow-2xl animate-fadeInUp">
+                <div class="flex items-center space-x-3">
+                    <div class="h-12 w-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shadow-lg">
+                        <i class="fas fa-fish text-[#88f1ff] text-xl"></i>
                     </div>
-                {% endif %}
-                
-                <button type="submit" class="w-full bg-gradient-to-r from-primary to-secondary text-white font-medium py-3 px-4 rounded-lg hover:from-primary/90 hover:to-secondary/90 focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-200 transform hover:scale-105">
-                    <i class="fas fa-sign-in-alt mr-2"></i>
-                    Sign In
-                </button>
-            </form>
+                    <div class="text-lg font-semibold tracking-wide text-white/90">FishNet</div>
+                </div>
 
-            <div class="my-6 flex items-center">
-                <div class="flex-1 border-t border-gray-200"></div>
-                <span class="px-3 text-xs text-gray-500 uppercase">or</span>
-                <div class="flex-1 border-t border-gray-200"></div>
+                <h1 class="login-font-display mt-10 text-4xl sm:text-5xl font-semibold leading-tight">
+                    Welcome back to the coast.
+                </h1>
+                <p class="mt-4 text-base sm:text-lg text-white/70 max-w-xl">
+                    Manage your catch, track orders, and stay connected with a community that values sustainable fishing.
+                </p>
+
+                <div class="mt-10 grid gap-4 sm:grid-cols-2 text-sm text-white/80">
+                    <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-shield-alt text-[#3dd5a8]"></i>
+                            <span class="font-medium">Secure Access</span>
+                        </div>
+                        <p class="mt-2 text-white/60">Protected sign-in and trusted transactions.</p>
+                    </div>
+                    <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-water text-[#88f1ff]"></i>
+                            <span class="font-medium">Live Marketplace</span>
+                        </div>
+                        <p class="mt-2 text-white/60">Fresh listings updated by local fishers.</p>
+                    </div>
+                    <div class="rounded-2xl border border-white/10 bg-white/5 p-4 sm:col-span-2">
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-leaf text-[#ffd166]"></i>
+                            <span class="font-medium">Sustainability First</span>
+                        </div>
+                        <p class="mt-2 text-white/60">Tools that make responsible fishing the default.</p>
+                    </div>
+                </div>
+
+                <div class="mt-10 flex items-center space-x-4 text-xs text-white/60">
+                    <span class="uppercase tracking-[0.3em]">Coastal Verified</span>
+                    <div class="h-px flex-1 bg-white/10"></div>
+                    <span class="inline-flex items-center space-x-2">
+                        <i class="fas fa-circle text-[#3dd5a8] text-[6px] animate-pulse"></i>
+                        <span>Network healthy</span>
+                    </span>
+                </div>
             </div>
-            <a href="/accounts/google/login/" class="w-full inline-flex justify-center items-center border border-gray-300 text-gray-700 font-medium py-3 px-4 rounded-lg hover:bg-gray-50 transition-all duration-200">
-                <i class="fab fa-google mr-2"></i>
-                Continue with Google
-            </a>
-            
-            <div class="mt-8 text-center">
-                <p class="text-sm text-gray-600">
+
+            <div class="bg-white text-slate-900 rounded-3xl p-8 sm:p-10 shadow-2xl border border-slate-100 animate-fadeInRight">
+                <div class="text-center">
+                    <h2 class="login-font-display text-3xl font-semibold">Sign in</h2>
+                    <p class="mt-2 text-sm text-slate-500">Use your account details to continue.</p>
+                </div>
+
+                <form method="post" class="mt-8 space-y-5 form-panel">
+                    {% csrf_token %}
+                    
+                    <div>
+                        <label for="{{ form.username.id_for_label }}" class="block text-sm font-semibold text-slate-700 mb-2">
+                            Username
+                        </label>
+                        <input type="text" 
+                               name="{{ form.username.name }}" 
+                               id="{{ form.username.id_for_label }}"
+                               value="{{ form.username.value|default:'' }}"
+                               class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#00b4d8] focus:border-transparent transition-all duration-200 placeholder-slate-400"
+                               placeholder="Enter your username"
+                               required>
+                        {% if form.username.errors %}
+                            <div class="mt-2 text-sm text-red-600">
+                                <i class="fas fa-exclamation-circle mr-1"></i>
+                                {{ form.username.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label for="{{ form.password.id_for_label }}" class="block text-sm font-semibold text-slate-700 mb-2">
+                            Password
+                        </label>
+                        <input type="password" 
+                               name="{{ form.password.name }}" 
+                               id="{{ form.password.id_for_label }}"
+                               class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-[#00b4d8] focus:border-transparent transition-all duration-200 placeholder-slate-400"
+                               placeholder="Enter your password"
+                               required>
+                        {% if form.password.errors %}
+                            <div class="mt-2 text-sm text-red-600">
+                                <i class="fas fa-exclamation-circle mr-1"></i>
+                                {{ form.password.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    {% if form.non_field_errors %}
+                        <div class="bg-red-50 border border-red-200 rounded-2xl p-4">
+                            <div class="text-sm text-red-700">
+                                <i class="fas fa-exclamation-triangle mr-2"></i>
+                                {{ form.non_field_errors.0 }}
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    <button type="submit" class="w-full bg-[#061725] text-white font-semibold py-3.5 px-4 rounded-2xl hover:bg-[#0b2438] focus:ring-2 focus:ring-[#00b4d8] focus:ring-offset-2 transition-all duration-200">
+                        <i class="fas fa-sign-in-alt mr-2"></i>
+                        Sign In
+                    </button>
+                </form>
+
+                <div class="my-6 flex items-center">
+                    <div class="flex-1 border-t border-slate-200"></div>
+                    <span class="px-3 text-[11px] uppercase tracking-[0.3em] text-slate-400">or</span>
+                    <div class="flex-1 border-t border-slate-200"></div>
+                </div>
+                <a href="/accounts/google/login/" class="w-full inline-flex justify-center items-center border border-slate-200 text-slate-700 font-semibold py-3 px-4 rounded-2xl hover:bg-slate-50 transition-all duration-200">
+                    <i class="fab fa-google mr-2"></i>
+                    Continue with Google
+                </a>
+                
+                <div class="mt-8 text-center text-sm text-slate-500">
                     Don't have an account? 
-                    <a href="{% url 'users:register' %}" class="font-medium text-primary hover:text-secondary transition-colors duration-200">
+                    <a href="{% url 'users:register' %}" class="font-semibold text-[#0066cc] hover:text-[#004d99] transition-colors duration-200">
                         Create one now
                     </a>
-                </p>
-            </div>
-        </div>
-
-        <!-- Additional Info -->
-        <div class="bg-white/50 backdrop-blur-sm rounded-xl p-6 text-center">
-            <div class="flex items-center justify-center space-x-6 text-sm text-gray-600">
-                <div class="flex items-center">
-                    <i class="fas fa-shield-alt text-green-500 mr-2"></i>
-                    Secure Login
-                </div>
-                <div class="flex items-center">
-                    <i class="fas fa-users text-blue-500 mr-2"></i>
-                    Join Community
-                </div>
-                <div class="flex items-center">
-                    <i class="fas fa-leaf text-green-600 mr-2"></i>
-                    Sustainable Fishing
                 </div>
             </div>
         </div>

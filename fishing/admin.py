@@ -1,7 +1,8 @@
 from django.contrib import admin
 from .models import (
     Fish, Cart, CartItem, Order, OrderItem, PaymentTransaction, Delivery,
-    FishTransactionLog, PickupPoint, DeliveryAuditLog, SellerNotification, PlatformFeeLog, ChairmanApprovalRequest
+    FishTransactionLog, PickupPoint, DeliveryAuditLog, SellerNotification, PlatformFeeLog, ChairmanApprovalRequest,
+    UserNotification
 )
 
 
@@ -67,7 +68,7 @@ class PaymentTransactionAdmin(admin.ModelAdmin):
 
 @admin.register(Delivery)
 class DeliveryAdmin(admin.ModelAdmin):
-    list_display = ('order', 'status', 'fisherman', 'updated_by', 'estimated_delivery', 'actual_delivery', 'created_at')
+    list_display = ('order', 'status', 'fisherman', 'assigned_agent', 'updated_by', 'estimated_delivery', 'actual_delivery', 'created_at')
     list_filter = ('status', 'created_at')
     search_fields = ('order__order_number', 'fisherman__username')
     raw_id_fields = ('order', 'fisherman')
@@ -101,6 +102,13 @@ class SellerNotificationAdmin(admin.ModelAdmin):
     list_display = ('fisherman', 'order', 'fish_item', 'total_amount', 'net_earnings', 'receipt_number', 'is_read', 'created_at')
     list_filter = ('is_read', 'created_at')
     search_fields = ('fisherman__username', 'order__order_number', 'fish_item', 'receipt_number')
+
+
+@admin.register(UserNotification)
+class UserNotificationAdmin(admin.ModelAdmin):
+    list_display = ('user', 'order', 'notification_type', 'is_read', 'created_at')
+    list_filter = ('notification_type', 'is_read', 'created_at')
+    search_fields = ('user__username', 'order__order_number', 'message')
 
 
 @admin.register(PlatformFeeLog)

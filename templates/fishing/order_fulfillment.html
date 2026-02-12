@@ -55,7 +55,7 @@
                                 {% else %}bg-gray-100 text-gray-800{% endif %}">
                                 {{ item.get_fulfillment_status_display }}
                             </span>
-                            <form method="POST" action="{% url 'fishing:update_order_status' order_number item.id %}" class="flex items-center gap-2">
+                            <form method="POST" action="{% url 'fishing:update_order_status' order_number item.id %}" class="flex items-center gap-2 form-panel">
                                 {% csrf_token %}
                                 <select name="status" class="border-gray-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500">
                                     <option value="PENDING" {% if item.fulfillment_status == 'PENDING' %}selected{% endif %}>Pending</option>

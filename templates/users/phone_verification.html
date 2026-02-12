@@ -21,7 +21,7 @@
                 <p class="text-sm text-gray-600 mb-6">
                     Current phone: <span class="font-semibold">{{ user.phone|default:"Not set" }}</span>
                 </p>
-                <form method="post" action="{% url 'users:resend_phone_verification' %}" class="mb-5">
+                <form method="post" action="{% url 'users:resend_phone_verification' %}" class="mb-5 form-panel">
                     {% csrf_token %}
                     <button type="submit" class="bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg font-medium">
                         Send KES 1 Verification STK Push

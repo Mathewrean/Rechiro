@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.http import JsonResponse
-from django.db import transaction
+from django.db import transaction, models
 from django.db.models import Sum
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
@@ -15,14 +15,23 @@ from urllib.parse import urlparse
 
 from .models import (
     Fish, Cart, CartItem, Order, OrderItem, PaymentTransaction, Delivery, FishTransactionLog,
-    PickupPoint, DeliveryAuditLog, SellerNotification, PlatformFeeLog, ChairmanApprovalRequest
+    PickupPoint, DeliveryAuditLog, SellerNotification, PlatformFeeLog, ChairmanApprovalRequest,
+    UserNotification
 )
 from .mpesa_service import initiate_stk_push, process_payment_callback
-from users.models import FishermanProfile, CustomerProfile
+from users.models import FishermanProfile, CustomerProfile, User
 from users.models import PhoneVerificationTransaction, BeachChairmanProfile
 from collections import defaultdict
 
 logger = logging.getLogger(__name__)
+
+
+def _is_delivery_user(user):
+    return user.is_authenticated and (user.role == 'delivery' or user.role == 'admin' or user.is_staff)
+
+
+def _order_payment_confirmed(order):
+    return order.transactions.filter(status='COMPLETED').exists()
 
 
 def _fisherman_payment_ready(profile, fisherman_user):
@@ -654,7 +663,7 @@ def mpesa_callback(request):
                             order=order,
                             defaults={
                                 'fisherman': payment_txn.fisherman,
-                                'status': 'READY_FOR_PICKUP',
+                                'status': 'ASSIGNED',
                                 'updated_by': payment_txn.fisherman,
                             }
                         )
@@ -663,7 +672,7 @@ def mpesa_callback(request):
                             order=order,
                             defaults={
                                 'fisherman': payment_txn.fisherman,
-                                'status': 'DELIVERY_IN_PROGRESS',
+                                'status': 'ASSIGNED',
                                 'updated_by': payment_txn.fisherman,
                             }
                         )
@@ -1031,12 +1040,12 @@ def update_order_status(request, order_number, item_id):
                 order=order,
                 defaults={
                     'fisherman': request.user,
-                    'status': 'READY_FOR_PICKUP' if order.fulfillment_method == 'pickup' else 'DELIVERY_IN_PROGRESS',
+                    'status': 'ASSIGNED',
                     'updated_by': request.user,
                 }
             )
             previous_status = delivery_obj.status
-            delivery_obj.status = 'READY_FOR_PICKUP' if order.fulfillment_method == 'pickup' else 'DELIVERY_IN_PROGRESS'
+            delivery_obj.status = 'ASSIGNED'
             delivery_obj.updated_by = request.user
             delivery_obj.save(update_fields=['status', 'updated_by', 'updated_at'])
             DeliveryAuditLog.objects.create(
@@ -1081,12 +1090,17 @@ def customer_dashboard(request):
     pending_orders = orders.filter(status__in=['PENDING', 'PAID', 'FULLY_PAID', 'DELIVERY_IN_PROGRESS', 'PROCESSING']).count()
     completed_orders = orders.filter(status='DELIVERED').count()
     
+    notifications = UserNotification.objects.filter(user=request.user)[:5]
+    unread_notifications = UserNotification.objects.filter(user=request.user, is_read=False).count()
+
     context = {
         'profile': profile,
         'recent_orders': recent_orders,
         'total_orders': total_orders,
         'pending_orders': pending_orders,
         'completed_orders': completed_orders,
+        'notifications': notifications,
+        'unread_notifications': unread_notifications,
     }
     return render(request, 'fishing/customer_dashboard.html', context)
 
@@ -1128,7 +1142,9 @@ def confirm_delivery(request, order_number):
             delivery.status = 'DELIVERED'
             delivery.actual_delivery = timezone.now()
             delivery.updated_by = request.user
-            delivery.save(update_fields=['status', 'actual_delivery', 'updated_by', 'updated_at'])
+            if not delivery.confirmation_code:
+                delivery.confirmation_code = request.POST.get('confirmation_code', '').strip()
+            delivery.save(update_fields=['status', 'actual_delivery', 'updated_by', 'updated_at', 'confirmation_code'])
             DeliveryAuditLog.objects.create(
                 delivery=delivery,
                 order=order,
@@ -1136,6 +1152,12 @@ def confirm_delivery(request, order_number):
                 previous_status=previous_status,
                 new_status='DELIVERED',
                 notes='Customer confirmed delivery',
+            )
+            UserNotification.objects.create(
+                user=order.customer,
+                order=order,
+                notification_type='DELIVERY',
+                message=f'Order #{order.order_number} marked as delivered.'
             )
         except Delivery.DoesNotExist:
             pass
@@ -1145,6 +1167,88 @@ def confirm_delivery(request, order_number):
     
     context = {'order': order}
     return render(request, 'fishing/confirm_delivery.html', context)
+
+
+@login_required
+def delivery_dashboard(request):
+    if not _is_delivery_user(request.user):
+        messages.error(request, 'Access denied. Delivery role required.')
+        return redirect('users:profile')
+
+    assigned_deliveries = Delivery.objects.filter(
+        assigned_agent=request.user
+    ).select_related('order', 'fisherman', 'assigned_agent', 'order__customer', 'order__pickup_point').order_by('-updated_at')
+
+    unassigned_deliveries = Delivery.objects.filter(
+        assigned_agent__isnull=True,
+        status__in=['ASSIGNED', 'PICKED_UP', 'IN_TRANSIT']
+    ).select_related('order', 'fisherman', 'order__customer', 'order__pickup_point').order_by('-updated_at')
+
+    def build_delivery_card(delivery):
+        order = delivery.order
+        fisherman = delivery.fisherman
+        if fisherman is None:
+            first_item = order.items.select_related('fisherman').first()
+            fisherman = first_item.fisherman if first_item else None
+        pickup_location = None
+        if order.pickup_point:
+            pickup_location = order.pickup_point.general_location
+        elif fisherman:
+            try:
+                pickup_location = fisherman.fisherman_profile.landing_site or fisherman.location
+            except Exception:
+                pickup_location = fisherman.location
+        return {
+            'delivery': delivery,
+            'order': order,
+            'customer': order.customer,
+            'fisherman': fisherman,
+            'pickup_location': pickup_location or 'Not set',
+            'payment_confirmed': _order_payment_confirmed(order),
+        }
+
+    assigned_cards = [build_delivery_card(d) for d in assigned_deliveries]
+    unassigned_cards = [build_delivery_card(d) for d in unassigned_deliveries]
+
+    context = {
+        'assigned_deliveries': assigned_cards,
+        'unassigned_deliveries': unassigned_cards,
+        'total_assigned': assigned_deliveries.count(),
+        'completed_deliveries': assigned_deliveries.filter(status='DELIVERED').count(),
+        'pending_deliveries': assigned_deliveries.filter(status__in=['ASSIGNED', 'PICKED_UP', 'IN_TRANSIT']).count(),
+        'failed_deliveries': assigned_deliveries.filter(status='FAILED').count(),
+    }
+    return render(request, 'fishing/delivery_dashboard.html', context)
+
+
+@login_required
+@require_http_methods(['POST'])
+def delivery_claim(request, order_number):
+    if not _is_delivery_user(request.user):
+        return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
+
+    order = get_object_or_404(Order, order_number=order_number)
+    delivery = get_object_or_404(Delivery, order=order)
+    if delivery.assigned_agent and not (request.user.is_staff or request.user.role == 'admin'):
+        return JsonResponse({'success': False, 'error': 'Already assigned'}, status=400)
+
+    previous_status = delivery.status
+    delivery.assigned_agent = request.user
+    delivery.updated_by = request.user
+    delivery.save(update_fields=['assigned_agent', 'updated_by', 'updated_at'])
+
+    DeliveryAuditLog.objects.create(
+        delivery=delivery,
+        order=order,
+        updated_by=request.user,
+        previous_status=previous_status,
+        new_status=delivery.status,
+        notes='Delivery assigned to agent',
+    )
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'success': True})
+    messages.success(request, f'Assigned delivery for order {order.order_number}.')
+    return redirect('fishing:delivery_dashboard')
 
 
 @login_required
@@ -1399,25 +1503,44 @@ def pickup_points_api(request):
 @login_required
 @require_http_methods(['POST'])
 def delivery_status_update(request, order_number):
-    """Delivery/pickup role updates status from ready-for-pickup to delivered."""
-    if request.user.role not in ['delivery', 'admin']:
+    """Delivery role updates delivery status."""
+    if not _is_delivery_user(request.user):
         return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
 
     order = get_object_or_404(Order, order_number=order_number)
     delivery = get_object_or_404(Delivery, order=order)
+    if delivery.assigned_agent and delivery.assigned_agent != request.user and not (request.user.is_staff or request.user.role == 'admin'):
+        return JsonResponse({'success': False, 'error': 'Not assigned to this delivery'}, status=403)
     new_status = request.POST.get('status')
-    if new_status not in ['READY_FOR_PICKUP', 'DELIVERED']:
+    if new_status not in ['ASSIGNED', 'PICKED_UP', 'IN_TRANSIT', 'DELIVERED', 'FAILED']:
         return JsonResponse({'success': False, 'error': 'Invalid status'}, status=400)
+
+    confirmation_code = request.POST.get('confirmation_code', '').strip()
+    proof_image = request.FILES.get('proof_image')
 
     previous_status = delivery.status
     delivery.status = new_status
+    if not delivery.assigned_agent:
+        delivery.assigned_agent = request.user
     delivery.updated_by = request.user
     if new_status == 'DELIVERED':
+        if not confirmation_code and not proof_image and not delivery.proof_image:
+            return JsonResponse({'success': False, 'error': 'Proof image or confirmation code required'}, status=400)
+        if confirmation_code:
+            delivery.confirmation_code = confirmation_code
+        if proof_image:
+            delivery.proof_image = proof_image
         delivery.actual_delivery = timezone.now()
         order.status = 'DELIVERED'
-    else:
-        order.status = 'READY_FOR_PICKUP'
-    delivery.save(update_fields=['status', 'updated_by', 'actual_delivery', 'updated_at'])
+    elif new_status == 'FAILED':
+        order.status = 'FAILED'
+    elif new_status == 'ASSIGNED':
+        order.status = 'READY_FOR_PICKUP' if order.fulfillment_method == 'pickup' else 'DELIVERY_IN_PROGRESS'
+    elif new_status == 'PICKED_UP':
+        order.status = 'PICKED_UP' if order.fulfillment_method == 'pickup' else 'OUT_FOR_DELIVERY'
+    elif new_status == 'IN_TRANSIT':
+        order.status = 'OUT_FOR_DELIVERY'
+    delivery.save(update_fields=['status', 'updated_by', 'actual_delivery', 'assigned_agent', 'proof_image', 'confirmation_code', 'updated_at'])
     order.save(update_fields=['status', 'updated_at'])
 
     DeliveryAuditLog.objects.create(
@@ -1428,7 +1551,34 @@ def delivery_status_update(request, order_number):
         new_status=new_status,
         notes='Updated by delivery role',
     )
-    return JsonResponse({'success': True, 'status': new_status})
+    if new_status == 'PICKED_UP':
+        UserNotification.objects.create(
+            user=order.customer,
+            order=order,
+            notification_type='DELIVERY',
+            message=f'Order #{order.order_number} has been picked up and is on the way.'
+        )
+    elif new_status == 'DELIVERED':
+        UserNotification.objects.create(
+            user=order.customer,
+            order=order,
+            notification_type='DELIVERY',
+            message=f'Order #{order.order_number} has been delivered.'
+        )
+    elif new_status == 'FAILED':
+        admins = User.objects.filter(models.Q(role='admin') | models.Q(is_staff=True)).distinct()
+        for admin_user in admins:
+            UserNotification.objects.create(
+                user=admin_user,
+                order=order,
+                notification_type='ADMIN_ALERT',
+                message=f'Delivery failed for order #{order.order_number}.',
+            )
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'success': True, 'status': new_status})
+    messages.success(request, f'Delivery status updated to {new_status}.')
+    return redirect('fishing:delivery_dashboard')
 
 
 # API Views

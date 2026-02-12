@@ -194,7 +194,7 @@ class CheckoutAndPaymentFlowTests(TestCase):
         tx = PaymentTransaction.objects.get(order=order)
         self.assertEqual(tx.status, 'COMPLETED')
         self.assertEqual(tx.mpesa_receipt_number, 'NLJ7RT61SV')
-        self.assertTrue(Delivery.objects.filter(order=order, status='DELIVERY_IN_PROGRESS').exists())
+        self.assertTrue(Delivery.objects.filter(order=order, status='ASSIGNED').exists())
         self.assertTrue(SellerNotification.objects.filter(payment_transaction=tx).exists())
 
     @patch('fishing.views.initiate_stk_push')
@@ -402,7 +402,7 @@ class DeliveryAndPickupEndpointsTests(TestCase):
             customer_phone='0711111111',
             customer_email='c1@example.com',
         )
-        self.delivery = Delivery.objects.create(order=self.order, status='READY_FOR_PICKUP')
+        self.delivery = Delivery.objects.create(order=self.order, status='ASSIGNED')
         PickupPoint.objects.create(
             name='Westlands Hub',
             general_location='Westlands',
@@ -430,7 +430,10 @@ class DeliveryAndPickupEndpointsTests(TestCase):
         self.assertEqual(forbidden.status_code, 403)
 
         self.client.login(username='deliver1', password='testpass123')
-        ok = self.client.post(reverse('fishing:delivery_status_update', args=[self.order.order_number]), {'status': 'DELIVERED'})
+        ok = self.client.post(
+            reverse('fishing:delivery_status_update', args=[self.order.order_number]),
+            {'status': 'DELIVERED', 'confirmation_code': 'ABC123'}
+        )
         self.assertEqual(ok.status_code, 200)
 
         self.order.refresh_from_db()

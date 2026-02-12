@@ -32,7 +32,7 @@
 
         <!-- Registration Form -->
         <div class="bg-white rounded-2xl shadow-xl p-8">
-            <form method="post" class="space-y-6">
+            <form method="post" class="space-y-6 form-panel">
                 {% csrf_token %}
                 
                 <!-- Basic Info Section -->
@@ -134,32 +134,36 @@
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <!-- Fisherman Option -->
-                        <label class="relative cursor-pointer">
-                            <input type="radio" name="role" value="fisherman" class="peer sr-only" required {% if form.role.value == 'fisherman' %}checked{% endif %}>
-                            <div class="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-400 transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-blue-50">
-                                <div class="text-center">
-                                    <div class="mx-auto h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center mb-3">
-                                        <i class="fas fa-fish text-blue-600 text-2xl"></i>
+                        <div>
+                            <input type="radio" id="role_fisherman" name="role" value="fisherman" class="peer sr-only" required {% if form.role.value == 'fisherman' %}checked{% endif %}>
+                            <label for="role_fisherman" class="block cursor-pointer">
+                                <div class="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-400 transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-blue-50">
+                                    <div class="text-center">
+                                        <div class="mx-auto h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+                                            <i class="fas fa-fish text-blue-600 text-2xl"></i>
+                                        </div>
+                                        <h4 class="font-bold text-gray-900">Fisherman</h4>
+                                        <p class="text-sm text-gray-600 mt-1">Sell fresh fish directly to customers</p>
                                     </div>
-                                    <h4 class="font-bold text-gray-900">Fisherman</h4>
-                                    <p class="text-sm text-gray-600 mt-1">Sell fresh fish directly to customers</p>
                                 </div>
-                            </div>
-                        </label>
+                            </label>
+                        </div>
                         
                         <!-- Customer Option -->
-                        <label class="relative cursor-pointer">
-                            <input type="radio" name="role" value="customer" class="peer sr-only" required {% if form.role.value == 'customer' %}checked{% endif %}>
-                            <div class="p-6 border-2 border-gray-200 rounded-xl hover:border-teal-400 transition-all duration-200 peer-checked:border-teal-500 peer-checked:bg-teal-50">
-                                <div class="text-center">
-                                    <div class="mx-auto h-16 w-16 bg-teal-100 rounded-full flex items-center justify-center mb-3">
-                                        <i class="fas fa-shopping-cart text-teal-600 text-2xl"></i>
+                        <div>
+                            <input type="radio" id="role_customer" name="role" value="customer" class="peer sr-only" required {% if form.role.value == 'customer' %}checked{% endif %}>
+                            <label for="role_customer" class="block cursor-pointer">
+                                <div class="p-6 border-2 border-gray-200 rounded-xl hover:border-teal-400 transition-all duration-200 peer-checked:border-teal-500 peer-checked:bg-teal-50">
+                                    <div class="text-center">
+                                        <div class="mx-auto h-16 w-16 bg-teal-100 rounded-full flex items-center justify-center mb-3">
+                                            <i class="fas fa-shopping-cart text-teal-600 text-2xl"></i>
+                                        </div>
+                                        <h4 class="font-bold text-gray-900">Customer</h4>
+                                        <p class="text-sm text-gray-600 mt-1">Buy fresh fish from fishermen</p>
                                     </div>
-                                    <h4 class="font-bold text-gray-900">Customer</h4>
-                                    <p class="text-sm text-gray-600 mt-1">Buy fresh fish from fishermen</p>
                                 </div>
-                            </div>
-                        </label>
+                            </label>
+                        </div>
                     </div>
                     {% if form.role.errors %}
                         <div class="text-sm text-red-600 text-center">
@@ -299,4 +303,3 @@
     </div>
 </div>
 {% endblock %}
-

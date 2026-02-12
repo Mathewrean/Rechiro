@@ -41,40 +41,39 @@
                         </div>
                     </div>
                     
-                    <!-- Step 3: Preparing -->
+                    <!-- Step 3: Assigned -->
                     <div class="relative pl-10 pb-8">
-                        <div class="absolute left-2 w-5 h-5 rounded-full {% if order.status in 'PROCESSING,READY,OUT_FOR_DELIVERY,DELIVERED' %}bg-green-500{% else %}bg-gray-300{% endif %}"></div>
+                        <div class="absolute left-2 w-5 h-5 rounded-full {% if delivery and delivery.status in 'ASSIGNED,PICKED_UP,IN_TRANSIT,DELIVERED' %}bg-green-500{% elif delivery and delivery.status == 'FAILED' %}bg-red-500{% else %}bg-gray-300{% endif %}"></div>
                         <div class="bg-gray-50 rounded-lg p-4">
-                            <p class="font-semibold text-gray-800">Preparing Your Order</p>
-                            <p class="text-sm text-gray-500">The fisherman is preparing your fish</p>
+                            <p class="font-semibold text-gray-800">Assigned</p>
+                            <p class="text-sm text-gray-500">A delivery agent has been assigned</p>
                         </div>
                     </div>
                     
-                    <!-- Step 4: Ready -->
+                    <!-- Step 4: Picked Up -->
                     <div class="relative pl-10 pb-8">
-                        <div class="absolute left-2 w-5 h-5 rounded-full {% if order.status in 'READY,OUT_FOR_DELIVERY,DELIVERED' %}bg-green-500{% else %}bg-gray-300{% endif %}"></div>
+                        <div class="absolute left-2 w-5 h-5 rounded-full {% if delivery and delivery.status in 'PICKED_UP,IN_TRANSIT,DELIVERED' %}bg-green-500{% elif delivery and delivery.status == 'FAILED' %}bg-red-500{% else %}bg-gray-300{% endif %}"></div>
                         <div class="bg-gray-50 rounded-lg p-4">
-                            <p class="font-semibold text-gray-800">Ready for {% if order.fulfillment_method == 'delivery' %}Delivery{% else %}Pickup{% endif %}</p>
-                            <p class="text-sm text-gray-500">
-                                {% if order.fulfillment_method == 'delivery' %}
-                                Your order is being prepared for delivery
-                                {% else %}
-                                Your order is ready for pickup
-                                {% endif %}
-                            </p>
+                            <p class="font-semibold text-gray-800">Picked Up</p>
+                            <p class="text-sm text-gray-500">Order collected and ready for transit</p>
                         </div>
                     </div>
                     
-                    <!-- Step 5: {% if order.fulfillment_method == 'delivery' %}Delivered{% else %}Picked Up{% endif %} -->
+                    <!-- Step 5: In Transit -->
+                    <div class="relative pl-10 pb-8">
+                        <div class="absolute left-2 w-5 h-5 rounded-full {% if delivery and delivery.status in 'IN_TRANSIT,DELIVERED' %}bg-green-500{% elif delivery and delivery.status == 'FAILED' %}bg-red-500{% else %}bg-gray-300{% endif %}"></div>
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <p class="font-semibold text-gray-800">In Transit</p>
+                            <p class="text-sm text-gray-500">Your order is on the way</p>
+                        </div>
+                    </div>
+
+                    <!-- Step 6: Delivered -->
                     <div class="relative pl-10">
-                        <div class="absolute left-2 w-5 h-5 rounded-full {% if order.status == 'DELIVERED' or order.status == 'PICKED_UP' %}bg-green-500{% else %}bg-gray-300{% endif %}"></div>
+                        <div class="absolute left-2 w-5 h-5 rounded-full {% if delivery and delivery.status == 'DELIVERED' %}bg-green-500{% elif delivery and delivery.status == 'FAILED' %}bg-red-500{% else %}bg-gray-300{% endif %}"></div>
                         <div class="bg-gray-50 rounded-lg p-4">
                             <p class="font-semibold text-gray-800">
-                                {% if order.fulfillment_method == 'delivery' %}
                                 Delivered
-                                {% else %}
-                                Picked Up
-                                {% endif %}
                             </p>
                             <p class="text-sm text-gray-500">
                                 {% if delivery.actual_delivery %}
@@ -116,16 +115,12 @@
             {% endif %}
 
             <!-- Confirm Delivery Button -->
-            {% if order.status == 'READY' or order.status == 'OUT_FOR_DELIVERY' %}
+            {% if delivery and delivery.status in 'PICKED_UP,IN_TRANSIT' %}
             <div class="p-6 border-t border-gray-200">
                 <a href="{% url 'fishing:confirm_delivery' order.order_number %}" 
                    class="block w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-bold text-center transition-colors">
                     <i class="fas fa-check-circle mr-2"></i>
-                    {% if order.fulfillment_method == 'delivery' %}
                     I Received My Order
-                    {% else %}
-                    I Picked Up My Order
-                    {% endif %}
                 </a>
             </div>
             {% endif %}
@@ -133,4 +128,3 @@
     </div>
 </div>
 {% endblock %}
-
