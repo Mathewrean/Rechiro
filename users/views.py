@@ -15,6 +15,7 @@ from django.views import View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.views.generic import UpdateView, DetailView, ListView
+from decimal import Decimal
 
 from .models import User, FishermanProfile, CustomerProfile, PhoneVerificationTransaction
 from .forms import UserRegistrationForm, UserLoginForm, ProfileUpdateForm, PasswordChangeForm, FishermanProfileForm, CustomerProfileForm
@@ -41,6 +42,27 @@ def _send_email_verification_link(request, user):
     return verify_link
 
 
+def _initiate_phone_verification_stk(user):
+    from fishing.mpesa_service import initiate_stk_push
+    verification_ref = f"PHONE-VERIFY-{user.id}"
+    stk_result = initiate_stk_push(
+        phone_number=user.phone,
+        amount=1,
+        order_number=verification_ref,
+        transaction_type='CustomerPayBillOnline',
+    )
+    if stk_result.get('success'):
+        PhoneVerificationTransaction.objects.create(
+            user=user,
+            phone_number=user.phone,
+            amount=Decimal('1.00'),
+            merchant_request_id=stk_result.get('merchant_request_id', ''),
+            checkout_request_id=stk_result.get('checkout_request_id', ''),
+            status='PENDING',
+        )
+    return stk_result
+
+
 def register_view(request):
     """Handle user registration"""
     if request.user.is_authenticated:
@@ -62,23 +84,8 @@ def register_view(request):
 
             # Seller phone ownership verification: KES 1 STK push.
             if user.role == 'fisherman':
-                from fishing.mpesa_service import initiate_stk_push
-                verification_ref = f"PHONE-VERIFY-{user.id}"
-                stk_result = initiate_stk_push(
-                    phone_number=user.phone,
-                    amount=1,
-                    order_number=verification_ref,
-                    transaction_type='CustomerPayBillOnline',
-                )
+                stk_result = _initiate_phone_verification_stk(user)
                 if stk_result.get('success'):
-                    PhoneVerificationTransaction.objects.create(
-                        user=user,
-                        phone_number=user.phone,
-                        amount=1,
-                        merchant_request_id=stk_result.get('merchant_request_id', ''),
-                        checkout_request_id=stk_result.get('checkout_request_id', ''),
-                        status='PENDING',
-                    )
                     messages.info(
                         request,
                         'Account created. Complete the KES 1 phone verification STK push to activate seller listing access.'
@@ -317,6 +324,8 @@ def verify_email_view(request, token):
         messages.success(request, 'Email verified successfully. You can now purchase with confidence.')
     except (BadSignature, SignatureExpired, User.DoesNotExist):
         messages.error(request, 'Invalid or expired verification link.')
+    if request.user.is_authenticated:
+        return redirect('users:email_verification')
     return redirect('users:login')
 
 
@@ -326,7 +335,7 @@ def resend_email_verification_view(request):
     user = request.user
     if user.email_verified:
         messages.info(request, 'Your email is already verified.')
-        return redirect('users:profile')
+        return redirect('users:email_verification')
     if not user.email:
         messages.error(request, 'Add an email address in your profile first.')
         return redirect('users:edit_profile')
@@ -337,7 +346,56 @@ def resend_email_verification_view(request):
         messages.success(request, 'Verification email sent. Check your inbox.')
     except Exception:
         messages.error(request, 'Failed to send verification email. Try again.')
-    return redirect('users:profile')
+    return redirect('users:email_verification')
+
+
+@login_required
+def email_verification_view(request):
+    verify_link = ''
+    if not request.user.email_verified and settings.DEBUG and request.user.email:
+        verify_link = _build_email_verification_link(request, request.user)
+    return render(
+        request,
+        'users/email_verification.html',
+        {
+            'email_verify_link': verify_link,
+            'title': 'Email Verification - FishNet',
+        }
+    )
+
+
+@login_required
+def phone_verification_view(request):
+    latest_txn = PhoneVerificationTransaction.objects.filter(user=request.user).order_by('-created_at').first()
+    return render(
+        request,
+        'users/phone_verification.html',
+        {
+            'latest_txn': latest_txn,
+            'title': 'Phone Verification - FishNet',
+        }
+    )
+
+
+@login_required
+@require_http_methods(['POST'])
+def resend_phone_verification_view(request):
+    user = request.user
+    if user.role != 'fisherman':
+        messages.error(request, 'Phone ownership verification is only required for fishermen.')
+        return redirect('users:profile')
+    if user.phone_verified:
+        messages.info(request, 'Your phone is already verified.')
+        return redirect('users:phone_verification')
+    if not user.phone:
+        messages.error(request, 'Add a phone number in your profile first.')
+        return redirect('users:edit_profile')
+    stk_result = _initiate_phone_verification_stk(user)
+    if stk_result.get('success'):
+        messages.success(request, 'KES 1 verification STK push sent. Complete it on your phone.')
+    else:
+        messages.error(request, f'Failed to send verification STK push: {stk_result.get("error", "Unknown error")}')
+    return redirect('users:phone_verification')
 
 
 @login_required

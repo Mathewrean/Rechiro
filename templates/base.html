@@ -227,6 +227,37 @@
     <!-- Spacer for navbar -->
     <div class="h-16"></div>
 
+    {% if user.is_authenticated and not user.email_verified %}
+        <div class="container mx-auto px-4 mt-4">
+            <div class="bg-amber-100 border-l-4 border-amber-500 text-amber-900 p-4 rounded-r-lg">
+                <div class="flex items-center justify-between gap-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-triangle-exclamation mr-2"></i>
+                        <span>Email not verified. Checkout is locked until verification is complete.</span>
+                    </div>
+                    <a href="{% url 'users:email_verification' %}" class="whitespace-nowrap bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded text-sm font-medium">
+                        Verify Email
+                    </a>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+    {% if user.is_authenticated and user.role == 'fisherman' and not user.phone_verified %}
+        <div class="container mx-auto px-4 mt-4">
+            <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-900 p-4 rounded-r-lg">
+                <div class="flex items-center justify-between gap-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-mobile-screen mr-2"></i>
+                        <span>Phone ownership is not verified. Fish listing is locked until KES 1 STK verification is completed.</span>
+                    </div>
+                    <a href="{% url 'users:phone_verification' %}" class="whitespace-nowrap bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-medium">
+                        Verify Phone
+                    </a>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
     <!-- Messages -->
     {% if messages %}
         <div class="container mx-auto px-4 mt-4">
@@ -399,6 +430,42 @@
                     closeMobileSidebar();
                 }
             });
+
+            // Safe auto-refresh:
+            // refresh only when page is hidden and there are no unsaved form changes.
+            const AUTO_REFRESH_MS = 180000; // 3 minutes
+            const dirtyKey = `fishnet:dirty:${window.location.pathname}`;
+            let hasUnsavedChanges = sessionStorage.getItem(dirtyKey) === '1';
+
+            const markDirty = () => {
+                hasUnsavedChanges = true;
+                sessionStorage.setItem(dirtyKey, '1');
+            };
+            const clearDirty = () => {
+                hasUnsavedChanges = false;
+                sessionStorage.removeItem(dirtyKey);
+            };
+
+            document.querySelectorAll('form').forEach((form) => {
+                form.addEventListener('input', markDirty);
+                form.addEventListener('change', markDirty);
+                form.addEventListener('submit', clearDirty);
+            });
+
+            setInterval(() => {
+                if (!document.hidden) return;
+                if (hasUnsavedChanges) return;
+                const active = document.activeElement;
+                if (active && (
+                    active.tagName === 'INPUT' ||
+                    active.tagName === 'TEXTAREA' ||
+                    active.tagName === 'SELECT' ||
+                    active.isContentEditable
+                )) {
+                    return;
+                }
+                window.location.reload();
+            }, AUTO_REFRESH_MS);
         });
     </script>
     {% block scripts %}

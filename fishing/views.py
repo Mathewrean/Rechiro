@@ -277,8 +277,8 @@ def checkout_initiate(request):
         messages.error(request, 'Your cart is empty.')
         return redirect('fishing:marketplace')
     if request.user.role == 'customer' and not request.user.email_verified:
-        messages.error(request, 'Please verify your email before checkout. Go to Profile and click "Send Verification Email".')
-        return redirect('users:profile')
+        messages.error(request, 'Please verify your email before checkout.')
+        return redirect('users:email_verification')
     if not request.user.phone:
         messages.error(request, 'Please add a phone number to your profile.')
         return redirect('users:edit_profile')
@@ -332,8 +332,8 @@ def checkout_process(request):
         messages.error(request, 'Your cart is empty.')
         return redirect('fishing:marketplace')
     if request.user.role == 'customer' and not request.user.email_verified:
-        messages.error(request, 'Please verify your email before checkout. Go to Profile and click "Send Verification Email".')
-        return redirect('users:profile')
+        messages.error(request, 'Please verify your email before checkout.')
+        return redirect('users:email_verification')
     if not _is_public_callback_url(getattr(settings, 'MPESA_CALLBACK_URL', '')):
         messages.error(
             request,
@@ -841,7 +841,7 @@ def add_fish(request):
         return redirect('users:edit_profile')
     if not request.user.phone_verified:
         messages.error(request, 'Complete KES 1 phone ownership verification before listing fish.')
-        return redirect('users:profile')
+        return redirect('users:phone_verification')
     if not fisher_profile.chairman_approved:
         messages.error(request, 'Your listing access is pending Lake Chairman approval.')
         return redirect('users:profile')

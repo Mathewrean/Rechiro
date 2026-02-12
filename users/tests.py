@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django.urls import reverse
 from django.conf import settings
+from unittest.mock import patch
 
 from .models import User
 
@@ -44,3 +45,32 @@ class AuthEndpointsTests(TestCase):
         self.client.login(username='authuser', password='testpass123')
         response = self.client.post(reverse('users:resend_email_verification'))
         self.assertEqual(response.status_code, 302)
+
+    def test_email_verification_page_requires_login(self):
+        response = self.client.get(reverse('users:email_verification'))
+        self.assertEqual(response.status_code, 302)
+
+    def test_email_verification_page_is_accessible_for_logged_in_user(self):
+        self.client.login(username='authuser', password='testpass123')
+        response = self.client.get(reverse('users:email_verification'))
+        self.assertEqual(response.status_code, 200)
+
+    def test_phone_verification_page_requires_login(self):
+        response = self.client.get(reverse('users:phone_verification'))
+        self.assertEqual(response.status_code, 302)
+
+    @patch('users.views._initiate_phone_verification_stk')
+    def test_fisherman_can_trigger_phone_verification_stk(self, mock_initiate):
+        fisher = User.objects.create_user(
+            username='fisherauth',
+            password='testpass123',
+            role='fisherman',
+            email='fisherauth@example.com',
+            phone='0700012345',
+            phone_verified=False,
+        )
+        mock_initiate.return_value = {'success': True}
+        self.client.login(username='fisherauth', password='testpass123')
+        response = self.client.post(reverse('users:resend_phone_verification'))
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(mock_initiate.called)

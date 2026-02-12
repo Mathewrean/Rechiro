@@ -12,10 +12,13 @@ urlpatterns = [
     
     # Profile URLs
     path('profile/', views.profile_view, name='profile'),
+    path('profile/email-verification/', views.email_verification_view, name='email_verification'),
+    path('profile/phone-verification/', views.phone_verification_view, name='phone_verification'),
     path('profile/edit/', views.edit_profile_view, name='edit_profile'),
     path('profile/edit-class/', views.UserProfileUpdateView.as_view(), name='edit_profile_class'),
     path('profile/change-password/', views.change_password_view, name='change_password'),
     path('profile/resend-email-verification/', views.resend_email_verification_view, name='resend_email_verification'),
+    path('profile/resend-phone-verification/', views.resend_phone_verification_view, name='resend_phone_verification'),
     path('profile/delete/', views.delete_account_view, name='delete_account'),
     
     # Dashboard URL

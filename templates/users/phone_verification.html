@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-10">
+    <div class="max-w-2xl mx-auto px-4">
+        <div class="bg-white rounded-2xl shadow-lg p-8">
+            <h1 class="text-2xl font-bold text-gray-800 mb-3">
+                <i class="fas fa-mobile-screen mr-2 text-primary"></i>Phone Ownership Verification
+            </h1>
+
+            {% if user.phone_verified %}
+                <div class="bg-green-50 border border-green-200 text-green-800 rounded-lg p-4">
+                    Your phone is verified. You can list fish.
+                </div>
+            {% else %}
+                <p class="text-gray-700 mb-4">
+                    Complete a KES 1 STK push to verify ownership of your Safaricom line before listing fish.
+                </p>
+                <p class="text-sm text-gray-600 mb-6">
+                    Current phone: <span class="font-semibold">{{ user.phone|default:"Not set" }}</span>
+                </p>
+                <form method="post" action="{% url 'users:resend_phone_verification' %}" class="mb-5">
+                    {% csrf_token %}
+                    <button type="submit" class="bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg font-medium">
+                        Send KES 1 Verification STK Push
+                    </button>
+                </form>
+                {% if not user.phone %}
+                    <p class="text-sm text-red-700">
+                        Add a phone number first.
+                        <a href="{% url 'users:edit_profile' %}" class="underline">Edit profile</a>
+                    </p>
+                {% endif %}
+            {% endif %}
+
+            {% if latest_txn %}
+                <div class="mt-8 border-t pt-4">
+                    <h2 class="font-semibold text-gray-800 mb-2">Latest Verification Attempt</h2>
+                    <p class="text-sm text-gray-700">Status: {{ latest_txn.get_status_display }}</p>
+                    <p class="text-sm text-gray-700">Created: {{ latest_txn.created_at|date:"Y-m-d H:i" }}</p>
+                    {% if latest_txn.mpesa_receipt_number %}
+                        <p class="text-sm text-gray-700">Receipt: {{ latest_txn.mpesa_receipt_number }}</p>
+                    {% endif %}
+                    {% if latest_txn.result_desc %}
+                        <p class="text-sm text-gray-700">Message: {{ latest_txn.result_desc }}</p>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
