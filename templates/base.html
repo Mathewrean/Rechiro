@@ -7,6 +7,46 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --form-border: #d1d5db;
+            --form-focus: #0066cc;
+            --form-bg: #ffffff;
+            --form-bg-soft: #f8fafc;
+        }
+        main form input[type="text"],
+        main form input[type="email"],
+        main form input[type="password"],
+        main form input[type="number"],
+        main form input[type="date"],
+        main form input[type="tel"],
+        main form input[type="url"],
+        main form select,
+        main form textarea {
+            border: 1px solid var(--form-border);
+            border-radius: 0.75rem;
+            background: var(--form-bg);
+            box-shadow: 0 1px 2px rgba(2, 6, 23, 0.04);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+        }
+        main form input[type="text"]:focus,
+        main form input[type="email"]:focus,
+        main form input[type="password"]:focus,
+        main form input[type="number"]:focus,
+        main form input[type="date"]:focus,
+        main form input[type="tel"]:focus,
+        main form input[type="url"]:focus,
+        main form select:focus,
+        main form textarea:focus {
+            outline: none;
+            border-color: var(--form-focus);
+            box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.18);
+            background: var(--form-bg-soft);
+        }
+        main form button[type="submit"] {
+            border-radius: 0.75rem;
+        }
+    </style>
     <script>
         tailwind.config = {
             theme: {
@@ -71,7 +111,7 @@
                         <a href="{% url 'fishing:order_list' %}" class="text-white/90 hover:text-white hover:bg-white/10 px-3 py-2 rounded-md font-medium transition-all duration-300">
                             <i class="fas fa-clipboard-list mr-1"></i>Orders
                         </a>
-                        {% if user.role == 'delivery' or user.role == 'admin' or user.is_staff %}
+                        {% if user.role == 'chairman' or user.role == 'delivery' or user.role == 'admin' or user.is_staff %}
                         <a href="{% url 'fishing:chairman_approval_queue' %}" class="text-white/90 hover:text-white hover:bg-white/10 px-3 py-2 rounded-md font-medium transition-all duration-300">
                             <i class="fas fa-user-check mr-1"></i>Approvals
                         </a>
@@ -175,7 +215,7 @@
                         <a href="{% url 'fishing:order_list' %}" class="flex items-center text-white/90 hover:text-white hover:bg-white/10 px-3 py-3 rounded-md font-medium transition-all duration-300">
                             <i class="fas fa-clipboard-list mr-3 w-5"></i>My Orders
                         </a>
-                        {% if user.role == 'delivery' or user.role == 'admin' or user.is_staff %}
+                        {% if user.role == 'chairman' or user.role == 'delivery' or user.role == 'admin' or user.is_staff %}
                         <a href="{% url 'fishing:chairman_approval_queue' %}" class="flex items-center text-white/90 hover:text-white hover:bg-white/10 px-3 py-3 rounded-md font-medium transition-all duration-300">
                             <i class="fas fa-user-check mr-3 w-5"></i>Approvals
                         </a>
@@ -433,7 +473,7 @@
 
             // Safe auto-refresh:
             // refresh only when page is hidden and there are no unsaved form changes.
-            const AUTO_REFRESH_MS = 180000; // 3 minutes
+            const AUTO_REFRESH_MS = 60000; // 1 minute
             const dirtyKey = `fishnet:dirty:${window.location.pathname}`;
             let hasUnsavedChanges = sessionStorage.getItem(dirtyKey) === '1';
 

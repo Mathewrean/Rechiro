@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from users.models import User, FishermanProfile, CustomerProfile
+from users.models import User, FishermanProfile, CustomerProfile, BeachChairmanProfile
 from users.models import PhoneVerificationTransaction
 from .models import (
     Fish,
@@ -556,6 +556,19 @@ class ChairmanApprovalWorkflowTests(TestCase):
             phone='0700088888',
             email='d2@example.com',
         )
+        self.chairman = User.objects.create_user(
+            username='beachchair',
+            password='testpass123',
+            role='chairman',
+            phone='0700077777',
+            email='chair@example.com',
+        )
+        BeachChairmanProfile.objects.create(
+            user=self.chairman,
+            beach_name='Bondo',
+            phone='0700077777',
+            notes='Lake chairman',
+        )
 
     def test_fisherman_can_submit_approval_request(self):
         self.client.login(username='fisher2', password='testpass123')
@@ -578,3 +591,29 @@ class ChairmanApprovalWorkflowTests(TestCase):
         self.assertEqual(req.status, 'APPROVED')
         self.assertEqual(req.reviewed_by, self.reviewer)
         self.assertTrue(self.profile.chairman_approved)
+
+    def test_chairman_dashboard_filters_requests_by_beach(self):
+        other_fisher = User.objects.create_user(
+            username='otherfisher',
+            password='testpass123',
+            role='fisherman',
+            phone='0700066666',
+            email='other@example.com',
+            phone_verified=True,
+        )
+        FishermanProfile.objects.create(
+            user=other_fisher,
+            phone='0700066666',
+            landing_site='Kisumu',
+            location='Kisumu',
+            contact_details='Dock',
+            mpesa_phone='0700066666',
+        )
+        ChairmanApprovalRequest.objects.create(fisherman=self.fisherman, status='PENDING', notes='Bondo request')
+        ChairmanApprovalRequest.objects.create(fisherman=other_fisher, status='PENDING', notes='Kisumu request')
+
+        self.client.login(username='beachchair', password='testpass123')
+        response = self.client.get(reverse('fishing:chairman_approval_queue'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'fisher2')
+        self.assertNotContains(response, 'otherfisher')

@@ -8,6 +8,11 @@
         <div class="mb-6">
             <h1 class="text-3xl font-bold text-gray-800">Chairman Approval Queue</h1>
             <p class="text-gray-600">Review fisherman listing requests.</p>
+            {% if chairman_profile %}
+            <p class="text-sm text-blue-700 mt-2">
+                Beach: <span class="font-semibold">{{ chairman_profile.beach_name }}</span>
+            </p>
+            {% endif %}
         </div>
 
         <div class="bg-white rounded-xl shadow-sm p-6 mb-8">
@@ -42,6 +47,28 @@
                 </div>
             {% else %}
                 <p class="text-gray-600">No pending requests.</p>
+            {% endif %}
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Fishermen Grouped by Beach</h2>
+            {% if grouped_fishermen %}
+                <div class="space-y-4">
+                    {% for beach, fishermen in grouped_fishermen.items %}
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <h3 class="font-semibold text-gray-800 mb-2">{{ beach }}</h3>
+                        <div class="grid md:grid-cols-2 gap-2">
+                            {% for fisher in fishermen %}
+                                <div class="text-sm text-gray-700">
+                                    {{ fisher.user.full_name|default:fisher.user.username }} ({{ fisher.phone }})
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-gray-600">No fishermen profiles found.</p>
             {% endif %}
         </div>
 

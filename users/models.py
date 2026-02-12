@@ -7,6 +7,7 @@ class User(AbstractUser):
     ROLE_CHOICES = [
         ('fisherman', 'Fisherman'),
         ('customer', 'Customer'),
+        ('chairman', 'Beach Chairman'),
         ('delivery', 'Delivery / Pickup'),
         ('admin', 'Admin'),
     ]
@@ -39,6 +40,15 @@ class User(AbstractUser):
             try:
                 return self.customer_profile
             except CustomerProfile.DoesNotExist:
+                return None
+        return None
+
+    def get_chairman_profile(self):
+        """Get chairman profile if user is a beach chairman"""
+        if self.role == 'chairman':
+            try:
+                return self.chairman_profile
+            except BeachChairmanProfile.DoesNotExist:
                 return None
         return None
 
@@ -107,6 +117,18 @@ class CustomerProfile(models.Model):
     class Meta:
         verbose_name = 'Customer Profile'
         verbose_name_plural = 'Customer Profiles'
+
+
+class BeachChairmanProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='chairman_profile')
+    beach_name = models.CharField(max_length=200)
+    phone = models.CharField(max_length=20, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Chairman Profile: {self.user.username} ({self.beach_name})"
 
 
 class PhoneVerificationTransaction(models.Model):

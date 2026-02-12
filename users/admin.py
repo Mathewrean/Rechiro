@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, FishermanProfile, CustomerProfile, PhoneVerificationTransaction
+from .models import User, FishermanProfile, CustomerProfile, BeachChairmanProfile, PhoneVerificationTransaction
 
 
 @admin.register(User)
@@ -45,6 +45,13 @@ class CustomerProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'phone', 'delivery_location', 'preferred_fulfillment', 'created_at')
     list_filter = ('preferred_fulfillment', 'created_at')
     search_fields = ('user__username', 'user__email', 'delivery_location')
+    raw_id_fields = ('user',)
+
+
+@admin.register(BeachChairmanProfile)
+class BeachChairmanProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'beach_name', 'phone', 'created_at')
+    search_fields = ('user__username', 'user__email', 'beach_name', 'phone')
     raw_id_fields = ('user',)
 
 

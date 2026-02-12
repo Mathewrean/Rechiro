@@ -19,7 +19,8 @@ from .models import (
 )
 from .mpesa_service import initiate_stk_push, process_payment_callback
 from users.models import FishermanProfile, CustomerProfile
-from users.models import PhoneVerificationTransaction
+from users.models import PhoneVerificationTransaction, BeachChairmanProfile
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -1209,6 +1210,11 @@ def request_chairman_approval(request):
         return redirect('users:profile')
 
     notes = request.POST.get('notes', '').strip()
+    landing_site = (profile.landing_site or '').strip()
+    if not landing_site:
+        messages.error(request, 'Set your landing site in profile before requesting chairman approval.')
+        return redirect('users:edit_profile')
+
     approval_request, created = ChairmanApprovalRequest.objects.get_or_create(
         fisherman=request.user,
         defaults={'notes': notes, 'status': 'PENDING'}
@@ -1225,13 +1231,17 @@ def request_chairman_approval(request):
         profile.chairman_name = ''
         profile.save(update_fields=['chairman_approved', 'chairman_name', 'updated_at'])
 
-    messages.success(request, 'Chairman approval request submitted.')
+    chair_count = BeachChairmanProfile.objects.filter(beach_name__iexact=landing_site).count()
+    if chair_count:
+        messages.success(request, f'Chairman approval request submitted for {landing_site}.')
+    else:
+        messages.warning(request, f'Request submitted, but no chairman profile is assigned to {landing_site} yet.')
     return redirect('fishing:fisherman_dashboard')
 
 
 @login_required
 def chairman_approval_queue(request):
-    if request.user.role not in ['delivery', 'admin'] and not request.user.is_staff:
+    if request.user.role not in ['chairman', 'delivery', 'admin'] and not request.user.is_staff:
         messages.error(request, 'Access denied.')
         return redirect('fishing:marketplace')
 
@@ -1240,17 +1250,38 @@ def chairman_approval_queue(request):
     )
     recent_requests = ChairmanApprovalRequest.objects.exclude(status='PENDING').select_related(
         'fisherman', 'reviewed_by'
-    )[:30]
+    )
+    chairman_profile = None
+    if request.user.role == 'chairman':
+        try:
+            chairman_profile = request.user.chairman_profile
+        except BeachChairmanProfile.DoesNotExist:
+            messages.error(request, 'Complete your Beach Chairman profile first.')
+            return redirect('users:edit_profile')
+        beach_name = (chairman_profile.beach_name or '').strip()
+        pending_requests = pending_requests.filter(fisherman__fisherman_profile__landing_site__iexact=beach_name)
+        recent_requests = recent_requests.filter(fisherman__fisherman_profile__landing_site__iexact=beach_name)
+
+    grouped = defaultdict(list)
+    fishermen = FishermanProfile.objects.select_related('user').order_by('landing_site', 'user__username')
+    for fp in fishermen:
+        beach = (fp.landing_site or 'Unspecified').strip() or 'Unspecified'
+        if chairman_profile and beach.lower() != (chairman_profile.beach_name or '').strip().lower():
+            continue
+        grouped[beach].append(fp)
+
     return render(request, 'fishing/chairman_approval_queue.html', {
         'pending_requests': pending_requests,
-        'recent_requests': recent_requests,
+        'recent_requests': recent_requests[:30],
+        'chairman_profile': chairman_profile,
+        'grouped_fishermen': dict(grouped),
     })
 
 
 @login_required
 @require_http_methods(['POST'])
 def review_chairman_approval(request, request_id):
-    if request.user.role not in ['delivery', 'admin'] and not request.user.is_staff:
+    if request.user.role not in ['chairman', 'delivery', 'admin'] and not request.user.is_staff:
         return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
 
     approval_request = get_object_or_404(
@@ -1267,6 +1298,15 @@ def review_chairman_approval(request, request_id):
     if not profile:
         messages.error(request, 'Fisherman profile not found.')
         return redirect('fishing:chairman_approval_queue')
+    if request.user.role == 'chairman':
+        try:
+            chair_profile = request.user.chairman_profile
+        except BeachChairmanProfile.DoesNotExist:
+            messages.error(request, 'Complete your Beach Chairman profile first.')
+            return redirect('users:edit_profile')
+        if (profile.landing_site or '').strip().lower() != (chair_profile.beach_name or '').strip().lower():
+            messages.error(request, 'You can only review requests from your assigned beach.')
+            return redirect('fishing:chairman_approval_queue')
 
     approval_request.status = 'APPROVED' if action == 'approve' else 'REJECTED'
     approval_request.notes = notes

@@ -17,8 +17,11 @@ from django.urls import reverse_lazy
 from django.views.generic import UpdateView, DetailView, ListView
 from decimal import Decimal
 
-from .models import User, FishermanProfile, CustomerProfile, PhoneVerificationTransaction
-from .forms import UserRegistrationForm, UserLoginForm, ProfileUpdateForm, PasswordChangeForm, FishermanProfileForm, CustomerProfileForm
+from .models import User, FishermanProfile, CustomerProfile, BeachChairmanProfile, PhoneVerificationTransaction
+from .forms import (
+    UserRegistrationForm, UserLoginForm, ProfileUpdateForm, PasswordChangeForm,
+    FishermanProfileForm, CustomerProfileForm, BeachChairmanProfileForm
+)
 from fishing.models import Fish, Order
 
 
@@ -200,6 +203,7 @@ def edit_profile_view(request):
     user = request.user
     fisherman_form = None
     customer_form = None
+    chairman_form = None
 
     if request.method == 'POST':
         form = ProfileUpdateForm(request.POST, request.FILES, instance=request.user)
@@ -235,6 +239,21 @@ def edit_profile_view(request):
                 prefix='customer',
             )
             profiles_valid = customer_form.is_valid()
+        elif user.role == 'chairman':
+            chairman_profile, _ = BeachChairmanProfile.objects.get_or_create(
+                user=user,
+                defaults={
+                    'beach_name': user.location or '',
+                    'phone': user.phone or '',
+                    'notes': '',
+                }
+            )
+            chairman_form = BeachChairmanProfileForm(
+                request.POST,
+                instance=chairman_profile,
+                prefix='chair',
+            )
+            profiles_valid = chairman_form.is_valid()
         else:
             profiles_valid = True
 
@@ -244,6 +263,8 @@ def edit_profile_view(request):
                 fisherman_form.save()
             if customer_form:
                 customer_form.save()
+            if chairman_form:
+                chairman_form.save()
             messages.success(request, 'Your profile has been updated successfully.')
             return redirect('users:profile')
     else:
@@ -270,11 +291,22 @@ def edit_profile_view(request):
                 }
             )
             customer_form = CustomerProfileForm(instance=customer_profile, prefix='customer')
+        elif user.role == 'chairman':
+            chairman_profile, _ = BeachChairmanProfile.objects.get_or_create(
+                user=user,
+                defaults={
+                    'beach_name': user.location or '',
+                    'phone': user.phone or '',
+                    'notes': '',
+                }
+            )
+            chairman_form = BeachChairmanProfileForm(instance=chairman_profile, prefix='chair')
     
     context = {
         'form': form,
         'fisherman_form': fisherman_form,
         'customer_form': customer_form,
+        'chairman_form': chairman_form,
         'title': 'Edit Profile - FishNet'
     }
     return render(request, 'users/edit_profile.html', context)
@@ -308,6 +340,8 @@ def dashboard_view(request):
         return redirect('fishing:fisherman_dashboard')
     elif user.role == 'customer':
         return redirect('fishing:customer_dashboard')
+    elif user.role == 'chairman':
+        return redirect('fishing:chairman_approval_queue')
     else:
         # Admin or other roles
         return redirect('users:profile')

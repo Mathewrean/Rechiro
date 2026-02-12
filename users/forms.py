@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import authenticate
-from .models import User, FishermanProfile, CustomerProfile
+from .models import User, FishermanProfile, CustomerProfile, BeachChairmanProfile
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -47,6 +47,13 @@ class UserRegistrationForm(UserCreationForm):
                     delivery_address='',
                     preferred_fulfillment='delivery'
                 )
+            elif user.role == 'chairman':
+                BeachChairmanProfile.objects.create(
+                    user=user,
+                    beach_name=user.location or '',
+                    phone=user.phone,
+                    notes=''
+                )
         return user
 
 
@@ -91,6 +98,20 @@ class CustomerProfileForm(forms.ModelForm):
             'delivery_notes': forms.Textarea(attrs={'rows': 2}),
         }
     
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for field_name, field in self.fields.items():
+            field.widget.attrs['class'] = 'form-control'
+
+
+class BeachChairmanProfileForm(forms.ModelForm):
+    class Meta:
+        model = BeachChairmanProfile
+        fields = ('beach_name', 'phone', 'notes')
+        widgets = {
+            'notes': forms.Textarea(attrs={'rows': 3}),
+        }
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
@@ -144,6 +165,20 @@ class ProfileUpdateForm(forms.ModelForm):
                         delivery_location=user.location,
                         delivery_address='',
                         preferred_fulfillment='delivery'
+                    )
+            elif user.role == 'chairman':
+                try:
+                    profile = user.chairman_profile
+                    profile.phone = user.phone
+                    if user.location:
+                        profile.beach_name = user.location
+                    profile.save()
+                except BeachChairmanProfile.DoesNotExist:
+                    BeachChairmanProfile.objects.create(
+                        user=user,
+                        beach_name=user.location or '',
+                        phone=user.phone,
+                        notes=''
                     )
         return user
 
