@@ -11,10 +11,11 @@ from django.utils import timezone
 from django.conf import settings
 from decimal import Decimal
 import logging
+from urllib.parse import urlparse
 
 from .models import (
     Fish, Cart, CartItem, Order, OrderItem, PaymentTransaction, Delivery, FishTransactionLog,
-    PickupPoint, DeliveryAuditLog
+    PickupPoint, DeliveryAuditLog, SellerNotification
 )
 from .mpesa_service import initiate_stk_push, process_payment_callback
 from users.models import FishermanProfile, CustomerProfile
@@ -37,6 +38,18 @@ def _fisherman_payment_ready(profile, fisherman_user):
     if payment_type == 'TILL' and not profile.mpesa_till_number:
         return False, "missing Till number"
     return True, ""
+
+
+def _is_public_callback_url(url_value):
+    if not url_value:
+        return False
+    parsed = urlparse(url_value)
+    if parsed.scheme not in ['http', 'https'] or not parsed.netloc:
+        return False
+    host = parsed.hostname or ''
+    if host in ['localhost', '127.0.0.1', '0.0.0.0']:
+        return False
+    return True
 
 def fish_marketplace(request):
     """Display all available fish in Amazon-style grid layout"""
@@ -314,6 +327,12 @@ def checkout_process(request):
     if not items:
         messages.error(request, 'Your cart is empty.')
         return redirect('fishing:marketplace')
+    if not _is_public_callback_url(getattr(settings, 'MPESA_CALLBACK_URL', '')):
+        messages.error(
+            request,
+            'Payment callback URL is not publicly accessible. Set MPESA_CALLBACK_URL to your live ngrok/public URL.'
+        )
+        return redirect('fishing:checkout_initiate')
     
     # Get form data
     fulfillment_method = request.POST.get('fulfillment_method', 'delivery')
@@ -480,103 +499,153 @@ def mpesa_callback(request):
     
     try:
         raw_data = request.body.decode('utf-8')
+        logger.info('M-Pesa callback payload: %s', raw_data)
         result = process_payment_callback(raw_data)
-        
         checkout_request_id = result.get('checkout_request_id')
-        try:
-            payment_txn = PaymentTransaction.objects.select_related('order', 'order_item').get(
-                checkout_request_id=checkout_request_id
-            )
-        except PaymentTransaction.DoesNotExist:
-            logger.error(f'Transaction not found for checkout_request_id: {checkout_request_id}')
-            return JsonResponse({'status': 'error', 'message': 'Transaction not found'}, status=404)
+        if not checkout_request_id:
+            logger.error('M-Pesa callback missing checkout_request_id. Parsed result=%s', result)
+            return JsonResponse({'status': 'error', 'message': 'Missing checkout request id'}, status=400)
 
-        order = payment_txn.order
-        if result.get('success'):
-            callback_amount = result.get('amount')
-            if callback_amount is not None:
-                try:
-                    if Decimal(str(callback_amount)).quantize(Decimal('0.01')) != payment_txn.amount:
+        with transaction.atomic():
+            try:
+                payment_txn = PaymentTransaction.objects.select_for_update().select_related('order', 'order_item').get(
+                    checkout_request_id=checkout_request_id
+                )
+            except PaymentTransaction.DoesNotExist:
+                logger.error('Transaction not found for checkout_request_id=%s', checkout_request_id)
+                return JsonResponse({'status': 'error', 'message': 'Transaction not found'}, status=404)
+
+            order = payment_txn.order
+
+            # Idempotency: callback already handled.
+            if payment_txn.status == 'COMPLETED':
+                logger.info('Duplicate callback ignored for checkout_request_id=%s', checkout_request_id)
+                return JsonResponse({'status': 'success', 'message': 'Already processed'})
+
+            result_code = result.get('result_code')
+            try:
+                normalized_result_code = int(result_code)
+            except (TypeError, ValueError):
+                normalized_result_code = -1
+
+            if normalized_result_code == 0 and result.get('success'):
+                callback_amount = result.get('amount')
+                if callback_amount is not None:
+                    try:
+                        callback_amount_dec = Decimal(str(callback_amount)).quantize(Decimal('0.01'))
+                    except Exception:
+                        logger.error('Invalid callback amount for checkout_request_id=%s amount=%s', checkout_request_id, callback_amount)
+                        return JsonResponse({'status': 'error', 'message': 'Invalid callback amount'}, status=400)
+                    if callback_amount_dec != payment_txn.amount:
                         payment_txn.status = 'FAILED'
                         payment_txn.result_desc = 'Amount mismatch in callback validation'
-                        payment_txn.save(update_fields=['status', 'result_desc', 'updated_at'])
+                        payment_txn.result_code = normalized_result_code
+                        payment_txn.save(update_fields=['status', 'result_desc', 'result_code', 'updated_at'])
+                        logger.error(
+                            'Amount mismatch for checkout_request_id=%s expected=%s got=%s',
+                            checkout_request_id, payment_txn.amount, callback_amount_dec
+                        )
                         return JsonResponse({'status': 'error', 'message': 'Callback amount validation failed'}, status=400)
-                except Exception:
-                    return JsonResponse({'status': 'error', 'message': 'Invalid callback amount'}, status=400)
 
-            payment_txn.mpesa_receipt_number = result.get('transaction_id', '')
-            payment_txn.result_code = result.get('result_code')
+                receipt_number = result.get('transaction_id', '') or ''
+                payment_txn.mpesa_receipt_number = receipt_number
+                payment_txn.result_code = normalized_result_code
+                payment_txn.result_desc = result.get('result_desc', '')
+                payment_txn.status = 'COMPLETED'
+                payment_txn.save(update_fields=[
+                    'mpesa_receipt_number', 'result_code', 'result_desc', 'status', 'updated_at'
+                ])
+
+                if payment_txn.order_item and payment_txn.order_item.fulfillment_status != 'PAID':
+                    payment_txn.order_item.fulfillment_status = 'PAID'
+                    payment_txn.order_item.save(update_fields=['fulfillment_status'])
+                    FishTransactionLog.objects.create(
+                        fish=payment_txn.order_item.fish,
+                        action='PAYMENT_RECEIVED',
+                        user=order.customer,
+                        weight_change=payment_txn.order_item.weight_kg,
+                        notes=(
+                            f'Buyer={order.customer_id}, Fisherman={payment_txn.fisherman_id}, '
+                            f'Fish={payment_txn.order_item.fish_name}, WeightKg={payment_txn.weight_kg}, '
+                            f'UnitPrice={payment_txn.unit_price_per_kg}, Total={payment_txn.amount}, '
+                            f'PlatformFee={payment_txn.platform_fee}, NetPayout={payment_txn.net_payout}, '
+                            f'MpesaID={payment_txn.mpesa_receipt_number}, Status={payment_txn.status}'
+                        )
+                    )
+
+                    SellerNotification.objects.get_or_create(
+                        fisherman=payment_txn.fisherman,
+                        buyer=order.customer,
+                        order=order,
+                        payment_transaction=payment_txn,
+                        defaults={
+                            'fish_item': payment_txn.order_item.fish_name,
+                            'weight_kg': payment_txn.weight_kg,
+                            'total_amount': payment_txn.amount,
+                            'net_earnings': payment_txn.net_payout,
+                            'receipt_number': payment_txn.mpesa_receipt_number,
+                            'message': (
+                                f'Payment received from {order.customer.username} for {payment_txn.order_item.fish_name}. '
+                                f'{payment_txn.weight_kg}kg, KES {payment_txn.amount}, '
+                                f'net KES {payment_txn.net_payout}, receipt {payment_txn.mpesa_receipt_number}.'
+                            ),
+                        }
+                    )
+
+                pending_count = order.transactions.filter(status='PENDING').count()
+                failed_count = order.transactions.filter(status='FAILED').count()
+                if pending_count == 0 and failed_count == 0:
+                    if order.status not in ['FULLY_PAID', 'DELIVERY_IN_PROGRESS', 'DELIVERED']:
+                        order.mark_as_paid(transaction_id=payment_txn.transaction_id)
+                        order.status = 'DELIVERY_IN_PROGRESS'
+                        order.save(update_fields=['status', 'updated_at'])
+                    if order.fulfillment_method == 'pickup':
+                        Delivery.objects.update_or_create(
+                            order=order,
+                            defaults={
+                                'fisherman': payment_txn.fisherman,
+                                'status': 'READY_FOR_PICKUP',
+                                'updated_by': payment_txn.fisherman,
+                            }
+                        )
+                    else:
+                        Delivery.objects.update_or_create(
+                            order=order,
+                            defaults={
+                                'fisherman': payment_txn.fisherman,
+                                'status': 'DELIVERY_IN_PROGRESS',
+                                'updated_by': payment_txn.fisherman,
+                            }
+                        )
+                    return JsonResponse({'status': 'success', 'message': 'Payment confirmed. Order is paid.'})
+
+                if order.status == 'PENDING':
+                    order.status = 'PAID'
+                    order.save(update_fields=['status', 'updated_at'])
+                return JsonResponse({'status': 'success', 'message': 'Payment entry confirmed.'})
+
+            # Failed / cancelled callback
+            payment_txn.status = 'FAILED'
+            payment_txn.result_code = normalized_result_code
             payment_txn.result_desc = result.get('result_desc', '')
-            payment_txn.status = 'COMPLETED'
-            payment_txn.save()
+            payment_txn.save(update_fields=['status', 'result_code', 'result_desc', 'updated_at'])
+
+            if order.transactions.filter(status='FAILED').exists():
+                order.status = 'FAILED'
+                order.save(update_fields=['status', 'updated_at'])
 
             if payment_txn.order_item:
-                payment_txn.order_item.fulfillment_status = 'PAID'
-                payment_txn.order_item.save(update_fields=['fulfillment_status'])
                 FishTransactionLog.objects.create(
                     fish=payment_txn.order_item.fish,
-                    action='PAYMENT_RECEIVED',
+                    action='STOCK_RELEASED',
                     user=order.customer,
                     weight_change=payment_txn.order_item.weight_kg,
-                    notes=(
-                        f'Buyer={order.customer_id}, Fisherman={payment_txn.fisherman_id}, '
-                        f'Fish={payment_txn.order_item.fish_name}, WeightKg={payment_txn.weight_kg}, '
-                        f'UnitPrice={payment_txn.unit_price_per_kg}, Total={payment_txn.amount}, '
-                        f'PlatformFee={payment_txn.platform_fee}, NetPayout={payment_txn.net_payout}, '
-                        f'MpesaID={payment_txn.mpesa_receipt_number}, Status={payment_txn.status}'
-                    )
+                    notes=f'Stock released due to payment failure for Order #{order.order_number}'
                 )
-
-            pending_count = order.transactions.filter(status='PENDING').count()
-            failed_count = order.transactions.filter(status='FAILED').count()
-            if pending_count == 0 and failed_count == 0:
-                order.mark_as_paid(transaction_id=payment_txn.transaction_id)
-                order.status = 'DELIVERY_IN_PROGRESS'
-                order.save(update_fields=['status', 'updated_at'])
-                if order.fulfillment_method == 'pickup':
-                    Delivery.objects.update_or_create(
-                        order=order,
-                        defaults={
-                            'fisherman': payment_txn.fisherman,
-                            'status': 'READY_FOR_PICKUP',
-                            'updated_by': payment_txn.fisherman,
-                        }
-                    )
-                else:
-                    Delivery.objects.update_or_create(
-                        order=order,
-                        defaults={
-                            'fisherman': payment_txn.fisherman,
-                            'status': 'DELIVERY_IN_PROGRESS',
-                            'updated_by': payment_txn.fisherman,
-                        }
-                    )
-                return JsonResponse({'status': 'success', 'message': 'Payment confirmed. Order is fully paid.'})
-
-            # Partial success still considered paid in progress.
-            order.status = 'PAID'
-            order.save(update_fields=['status', 'updated_at'])
-            return JsonResponse({'status': 'success', 'message': 'Payment entry confirmed.'})
-
-        payment_txn.status = 'FAILED'
-        payment_txn.result_code = result.get('result_code')
-        payment_txn.result_desc = result.get('result_desc', '')
-        payment_txn.save()
-        order.status = 'FAILED'
-        order.save(update_fields=['status', 'updated_at'])
-
-        if payment_txn.order_item:
-            FishTransactionLog.objects.create(
-                fish=payment_txn.order_item.fish,
-                action='STOCK_RELEASED',
-                user=order.customer,
-                weight_change=payment_txn.order_item.weight_kg,
-                notes=f'Stock released due to payment failure for Order #{order.order_number}'
-            )
-        return JsonResponse({'status': 'failed', 'message': result.get('result_desc')})
+            return JsonResponse({'status': 'failed', 'message': result.get('result_desc')})
     
     except Exception as e:
-        logger.error(f'Error processing M-Pesa callback: {str(e)}')
+        logger.exception('Error processing M-Pesa callback')
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
@@ -666,6 +735,8 @@ def fisherman_dashboard(request):
     
     # Recent orders
     recent_orders = my_order_items.order_by('-order__created_at')[:10]
+    notifications = SellerNotification.objects.filter(fisherman=request.user).order_by('-created_at')[:10]
+    unread_notifications_count = SellerNotification.objects.filter(fisherman=request.user, is_read=False).count()
     
     context = {
         'profile': profile,
@@ -680,6 +751,8 @@ def fisherman_dashboard(request):
         'net_earnings': net_earnings,
         'total_items_sold': total_items_sold,
         'pending_orders': pending_orders,
+        'notifications': notifications,
+        'unread_notifications_count': unread_notifications_count,
     }
     return render(request, 'fishing/fisherman_dashboard.html', context)
 
@@ -1054,6 +1127,42 @@ def manage_pickup_points(request):
 
     points = PickupPoint.objects.all().order_by('name')
     return render(request, 'fishing/manage_pickup_points.html', {'pickup_points': points})
+
+
+@login_required
+@require_http_methods(['POST'])
+def mark_notification_read(request, notification_id):
+    if request.user.role != 'fisherman':
+        return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
+    notification = get_object_or_404(SellerNotification, id=notification_id, fisherman=request.user)
+    notification.is_read = True
+    notification.save(update_fields=['is_read'])
+    return JsonResponse({'success': True})
+
+
+@login_required
+@require_http_methods(['GET'])
+def api_seller_notifications(request):
+    if request.user.role != 'fisherman':
+        return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
+    notifications = SellerNotification.objects.filter(fisherman=request.user).order_by('-created_at')[:5]
+    payload = [
+        {
+            'id': note.id,
+            'order_number': note.order.order_number,
+            'fish_item': note.fish_item,
+            'weight_kg': str(note.weight_kg),
+            'total_amount': str(note.total_amount),
+            'net_earnings': str(note.net_earnings),
+            'receipt_number': note.receipt_number,
+            'buyer': note.buyer.username if note.buyer else 'Customer',
+            'timestamp': note.created_at.isoformat(),
+            'is_read': note.is_read,
+        }
+        for note in notifications
+    ]
+    unread_count = SellerNotification.objects.filter(fisherman=request.user, is_read=False).count()
+    return JsonResponse({'success': True, 'unread_count': unread_count, 'notifications': payload})
 
 
 @login_required

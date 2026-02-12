@@ -17,6 +17,40 @@
             </a>
         </div>
 
+        {% if notifications %}
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold text-gray-800">
+                    <i class="fas fa-bell mr-2 text-emerald-600"></i>Payment Alerts
+                </h2>
+                <span class="px-3 py-1 rounded-full text-sm font-semibold bg-emerald-100 text-emerald-700">
+                    {{ unread_notifications_count }} unread
+                </span>
+            </div>
+            <div class="space-y-3">
+                {% for note in notifications|slice:":5" %}
+                <div class="border rounded-lg p-4 {% if not note.is_read %}border-emerald-300 bg-emerald-50{% else %}border-gray-200 bg-gray-50{% endif %}">
+                    <p class="font-semibold text-gray-800">Payment Confirmed - Order #{{ note.order.order_number }}</p>
+                    <p class="text-sm text-gray-700">
+                        Buyer: {{ note.buyer.username|default:"Customer" }} | Fish: {{ note.fish_item }} | Weight: {{ note.weight_kg }}kg
+                    </p>
+                    <p class="text-sm text-gray-700">
+                        Total: KES {{ note.total_amount|floatformat:2 }} | Net Earnings: KES {{ note.net_earnings|floatformat:2 }}
+                    </p>
+                    <p class="text-sm text-gray-700">
+                        Receipt: {{ note.receipt_number }} | {{ note.created_at|date:"Y-m-d H:i" }}
+                    </p>
+                    {% if not note.is_read %}
+                    <button class="mt-2 text-sm text-blue-600 hover:underline mark-read-btn" data-id="{{ note.id }}">
+                        Mark as read
+                    </button>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Stats Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <div class="bg-white rounded-xl shadow-sm p-6">
@@ -235,4 +269,37 @@
         </div>
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const getCookie = (name) => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return '';
+  };
+  const buttons = document.querySelectorAll('.mark-read-btn');
+  let unreadCount = {{ unread_notifications_count|default:0 }};
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', function () {
+      const id = this.dataset.id;
+      fetch(`/fishing/fisherman/notifications/${id}/read/`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCookie('csrftoken')},
+      }).then(() => window.location.reload());
+    });
+  });
+
+  // Lightweight real-time alert: poll every 10s for newly confirmed payments.
+  setInterval(() => {
+    fetch('{% url "fishing:api_seller_notifications" %}')
+      .then(resp => resp.json())
+      .then(data => {
+        if (data.success && Number(data.unread_count) > Number(unreadCount)) {
+          window.location.reload();
+        }
+      })
+      .catch(() => {});
+  }, 10000);
+});
+</script>
 {% endblock %}

@@ -387,3 +387,21 @@ class DeliveryAuditLog(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+
+class SellerNotification(models.Model):
+    fisherman = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='seller_notifications')
+    buyer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='buyer_notifications')
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='seller_notifications')
+    payment_transaction = models.ForeignKey(PaymentTransaction, on_delete=models.CASCADE, related_name='seller_notifications')
+    fish_item = models.CharField(max_length=100)
+    weight_kg = models.DecimalField(max_digits=8, decimal_places=2)
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    net_earnings = models.DecimalField(max_digits=12, decimal_places=2)
+    receipt_number = models.CharField(max_length=100, blank=True)
+    message = models.TextField(blank=True)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']

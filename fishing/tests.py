@@ -16,6 +16,7 @@ from .models import (
     Delivery,
     PickupPoint,
     DeliveryAuditLog,
+    SellerNotification,
 )
 
 
@@ -188,7 +189,124 @@ class CheckoutAndPaymentFlowTests(TestCase):
         self.assertEqual(order.status, 'DELIVERY_IN_PROGRESS')
         tx = PaymentTransaction.objects.get(order=order)
         self.assertEqual(tx.status, 'COMPLETED')
+        self.assertEqual(tx.mpesa_receipt_number, 'NLJ7RT61SV')
         self.assertTrue(Delivery.objects.filter(order=order, status='DELIVERY_IN_PROGRESS').exists())
+        self.assertTrue(SellerNotification.objects.filter(payment_transaction=tx).exists())
+
+    @patch('fishing.views.initiate_stk_push')
+    def test_duplicate_callback_is_idempotent(self, mock_stk):
+        mock_stk.return_value = {
+            'success': True,
+            'merchant_request_id': 'MRQ4',
+            'checkout_request_id': 'CRQ4',
+        }
+
+        self.client.login(username='buyer', password='testpass123')
+        cart = Cart.objects.create(user=self.customer)
+        CartItem.objects.create(cart=cart, fish=self.fish, weight_kg=Decimal('1.00'))
+        self.client.post(reverse('fishing:checkout_process'), {
+            'fulfillment_method': 'delivery',
+            'delivery_location': 'Nairobi CBD',
+        })
+
+        payload = {
+            'Body': {
+                'stkCallback': {
+                    'MerchantRequestID': 'MRQ4',
+                    'CheckoutRequestID': 'CRQ4',
+                    'ResultCode': 0,
+                    'ResultDesc': 'Success',
+                    'CallbackMetadata': {
+                        'Item': [
+                            {'Name': 'Amount', 'Value': 500},
+                            {'Name': 'MpesaReceiptNumber', 'Value': 'RLJ7RT61SV'},
+                        ]
+                    }
+                }
+            }
+        }
+        first = self.client.post(reverse('fishing:mpesa_callback'), data=json.dumps(payload), content_type='application/json')
+        second = self.client.post(reverse('fishing:mpesa_callback'), data=json.dumps(payload), content_type='application/json')
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+
+        tx = PaymentTransaction.objects.get(checkout_request_id='CRQ4')
+        self.assertEqual(tx.status, 'COMPLETED')
+        self.assertEqual(SellerNotification.objects.filter(payment_transaction=tx).count(), 1)
+
+    @patch('fishing.views.initiate_stk_push')
+    def test_api_callback_alias_endpoint_works(self, mock_stk):
+        mock_stk.return_value = {
+            'success': True,
+            'merchant_request_id': 'MRQ5',
+            'checkout_request_id': 'CRQ5',
+        }
+        self.client.login(username='buyer', password='testpass123')
+        cart = Cart.objects.create(user=self.customer)
+        CartItem.objects.create(cart=cart, fish=self.fish, weight_kg=Decimal('1.00'))
+        self.client.post(reverse('fishing:checkout_process'), {
+            'fulfillment_method': 'delivery',
+            'delivery_location': 'Nairobi CBD',
+        })
+        payload = {
+            'Body': {
+                'stkCallback': {
+                    'MerchantRequestID': 'MRQ5',
+                    'CheckoutRequestID': 'CRQ5',
+                    'ResultCode': 0,
+                    'ResultDesc': 'Success',
+                    'CallbackMetadata': {
+                        'Item': [
+                            {'Name': 'Amount', 'Value': 500},
+                            {'Name': 'MpesaReceiptNumber', 'Value': 'ALIAS5'},
+                        ]
+                    }
+                }
+            }
+        }
+        response = self.client.post('/api/mpesa/callback/', data=json.dumps(payload), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+
+    @patch('fishing.views.initiate_stk_push')
+    def test_fisherman_notification_api_returns_confirmed_payment_details(self, mock_stk):
+        mock_stk.return_value = {
+            'success': True,
+            'merchant_request_id': 'MRQ6',
+            'checkout_request_id': 'CRQ6',
+        }
+        self.client.login(username='buyer', password='testpass123')
+        cart = Cart.objects.create(user=self.customer)
+        CartItem.objects.create(cart=cart, fish=self.fish, weight_kg=Decimal('1.00'))
+        self.client.post(reverse('fishing:checkout_process'), {
+            'fulfillment_method': 'delivery',
+            'delivery_location': 'Nairobi CBD',
+        })
+        payload = {
+            'Body': {
+                'stkCallback': {
+                    'MerchantRequestID': 'MRQ6',
+                    'CheckoutRequestID': 'CRQ6',
+                    'ResultCode': 0,
+                    'ResultDesc': 'Success',
+                    'CallbackMetadata': {
+                        'Item': [
+                            {'Name': 'Amount', 'Value': 500},
+                            {'Name': 'MpesaReceiptNumber', 'Value': 'NOTICE6'},
+                        ]
+                    }
+                }
+            }
+        }
+        self.client.post(reverse('fishing:mpesa_callback'), data=json.dumps(payload), content_type='application/json')
+
+        self.client.login(username='fisher', password='testpass123')
+        response = self.client.get(reverse('fishing:api_seller_notifications'))
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body.get('success'))
+        self.assertGreaterEqual(body.get('unread_count', 0), 1)
+        latest = body['notifications'][0]
+        self.assertEqual(latest['receipt_number'], 'NOTICE6')
 
     @patch('fishing.views.initiate_stk_push')
     def test_callback_amount_mismatch_rejected(self, mock_stk):

@@ -255,7 +255,11 @@ class MpesaService:
             data = json.loads(raw_data)
             stk_callback = data.get('Body', {}).get('stkCallback', {})
             
-            result_code = stk_callback.get('ResultCode')
+            result_code_raw = stk_callback.get('ResultCode')
+            try:
+                result_code = int(result_code_raw)
+            except (TypeError, ValueError):
+                result_code = -1
             result_desc = stk_callback.get('ResultDesc')
             
             # Check if transaction was successful
@@ -343,5 +347,5 @@ def process_payment_callback(raw_data):
     Returns:
         dict with processed transaction details
     """
-    print(f"M-Pesa Payment Callback - Raw Data: {raw_data}")
+    logger.info("M-Pesa Payment Callback - Raw Data: %s", raw_data)
     return MpesaService.parse_callback_data(raw_data)

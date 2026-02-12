@@ -20,15 +20,15 @@ We use GitHub to host code, to track issues and feature requests, as well as acc
 4. Ensure the test suite passes.
 5. Make sure your code lints.
 6. Issue that pull request!
-7. **Add yourself to the Contributors section below** (see format below).
+7. Open your pull request for review.
 
 ## Any contributions you make will be under the MIT Software License
 
 In short, when you submit code changes, your submissions are understood to be under the same [MIT License](http://choosealicense.com/licenses/mit/) that covers the project. Feel free to contact the maintainers if that's a concern.
 
-## Report bugs using GitHub's [issue tracker](https://github.com/LewisMagangi/Sustainable_Fishing/issues)
+## Report bugs using GitHub's [issue tracker](https://github.com/Mathewrean/Sustainable_Fishing/issues)
 
-We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/LewisMagangi/Sustainable_Fishing/issues/new).
+We use GitHub issues to track public bugs. Report a bug by [opening a new issue](https://github.com/Mathewrean/Sustainable_Fishing/issues/new).
 
 **Great Bug Reports** tend to have:
 
@@ -52,7 +52,7 @@ We use GitHub issues to track public bugs. Report a bug by [opening a new issue]
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/LewisMagangi/Sustainable_Fishing.git
+git clone https://github.com/Mathewrean/Sustainable_Fishing.git
 cd sustainable_fishing_project
 ```
 
@@ -107,22 +107,6 @@ Add user authentication system
 - Create login/logout views
 - Fixes #123
 ```
-
-## Contributors
-
-When you contribute to this project, please add your information to this list in alphabetical order by last name:
-
-### Format:
-```
-- **[Your Name](https://github.com/yourusername)** - Brief description of contribution
-```
-
-### Current Contributors:
-
-- **[Lewis Magangi](https://github.com/LewisMagangi)** - Project creator and maintainer
-- **[Fidel](https://github.com/phantom-kali)** - Dev
-
-<!-- Add your name here when you contribute! -->
 
 ## Feature Requests
 

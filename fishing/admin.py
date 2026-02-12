@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     Fish, Cart, CartItem, Order, OrderItem, PaymentTransaction, Delivery,
-    FishTransactionLog, PickupPoint, DeliveryAuditLog
+    FishTransactionLog, PickupPoint, DeliveryAuditLog, SellerNotification
 )
 
 
@@ -94,3 +94,10 @@ class DeliveryAuditLogAdmin(admin.ModelAdmin):
     list_display = ('order', 'delivery', 'updated_by', 'previous_status', 'new_status', 'created_at')
     list_filter = ('previous_status', 'new_status', 'created_at')
     search_fields = ('order__order_number', 'updated_by__username', 'notes')
+
+
+@admin.register(SellerNotification)
+class SellerNotificationAdmin(admin.ModelAdmin):
+    list_display = ('fisherman', 'order', 'fish_item', 'total_amount', 'net_earnings', 'receipt_number', 'is_read', 'created_at')
+    list_filter = ('is_read', 'created_at')
+    search_fields = ('fisherman__username', 'order__order_number', 'fish_item', 'receipt_number')

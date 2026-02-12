@@ -33,6 +33,8 @@ urlpatterns = [
     path('fisherman/delete-fish/<int:fish_id>/', views.delete_fish, name='delete_fish'),
     path('fisherman/orders/', views.order_fulfillment, name='order_fulfillment'),
     path('fisherman/orders/<str:order_number>/<int:item_id>/update/', views.update_order_status, name='update_order_status'),
+    path('fisherman/notifications/<int:notification_id>/read/', views.mark_notification_read, name='mark_notification_read'),
+    path('fisherman/notifications/api/', views.api_seller_notifications, name='api_seller_notifications'),
     
     # Customer Dashboard
     path('customer/dashboard/', views.customer_dashboard, name='customer_dashboard'),

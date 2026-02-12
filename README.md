@@ -1,105 +1,118 @@
-# 🐟 Sustainable Fishing Platform
+# FishNet (Sustainable Fishing)
 
-A Django-based web platform promoting sustainable fishing practices and connecting fishing communities.
+FishNet is a Django e-commerce platform for direct fish sales from verified fishermen to customers.
 
-## 🚀 Quick Start
+It includes:
+- Weight-based fish listings (`price_per_kg * weight_kg`)
+- M-Pesa Daraja STK checkout with callback validation
+- Automatic platform fee accounting (2%) and fisherman net payout (98%)
+- Customer order history and fisherman sales dashboard
+- Pickup-point and delivery workflow with audit logs
+- Email/password authentication plus Google OAuth (via `django-allauth` when installed)
 
-### Prerequisites
-- Python 3.8+
-- pip
-- Virtual environment (recommended)
+## Tech Stack
+- Python / Django
+- SQLite (default dev DB)
+- M-Pesa Daraja API
+- Tailwind (CDN in templates)
 
-### Installation
+## Project Structure
+- `sustainable_fishing/` Django settings and root URLs
+- `users/` custom user model, auth, profile management
+- `fishing/` marketplace, cart, checkout, payment, delivery, dashboards
+- `templates/` HTML templates
 
-1. **Clone the repository**
+## Quick Start
+1. Clone and enter project:
 ```bash
-git clone https://github.com/LewisMagangi/Sustainable_Fishing.git
-cd sustainable_fishing_project
+git clone https://github.com/Mathewrean/Sustainable_Fishing.git
+cd Sustainable_Fishing
 ```
 
-2. **Create virtual environment**
+2. Create and activate virtual env:
 ```bash
 python -m venv fishnet_env
-source fishnet_env/bin/activate  # Linux/Mac
-# fishnet_env\Scripts\activate   # Windows
+source fishnet_env/bin/activate
 ```
 
-3. **Install dependencies**
+3. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-4. **Run migrations**
+4. Create `.env` (example):
+```env
+DEBUG=True
+SECRET_KEY=change-me
+ALLOWED_HOSTS=127.0.0.1,localhost
+
+# Google OAuth
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# Daraja
+MPESA_CONSUMER_KEY=your-consumer-key
+MPESA_CONSUMER_SECRET=your-consumer-secret
+MPESA_BUSINESS_SHORT_CODE=174379
+MPESA_PASSKEY=your-passkey
+MPESA_CALLBACK_URL=https://your-ngrok-url.ngrok-free.app/fishing/mpesa/callback/
+MPESA_BASE_URL=https://sandbox.safaricom.co.ke
+```
+
+5. Migrate and run:
 ```bash
 python manage.py migrate
+python manage.py runserver 127.0.0.1:8000
 ```
 
-5. **Start development server**
+App URL: `http://127.0.0.1:8000/fishing/home/`
+
+## Running with ngrok (for Daraja callbacks)
+In another terminal:
 ```bash
-python manage.py runserver
+./ngrok http 8000
 ```
+Use the generated HTTPS URL to set `MPESA_CALLBACK_URL` to:
+- `https://<ngrok-domain>/fishing/mpesa/callback/`
 
-Visit `http://127.0.0.1:8000` in your browser.
+## Core Flows
 
-## 📁 Project Structure
+### Fisherman Flow
+- Create/edit fish listings with image uploads (supports phone camera capture inputs)
+- Configure M-Pesa profile fields in user profile
+- View sales dashboard: gross revenue, platform fee, net earnings
+- Manage order fulfillment statuses
 
-```
-sustainable_fishing_project/
-├── sustainable_fishing/    # Django project settings
-├── manage.py               # Django management script
-├── requirements.txt        # Python dependencies
-├── .gitignore             # Git ignore rules
-└── README.md              # This file
-```
+### Customer Flow
+- Browse fish listings and purchase by weight (kg)
+- Checkout triggers STK requests tied to listing/fisherman config
+- Order is marked paid only after successful callback validation
+- Track order and delivery status history
 
-## 🛠️ Development
+### Delivery / Pickup Flow
+- Add/manage pickup points (`/fishing/pickup-points/manage/`)
+- Delivery/pickup role can update shipment status
+- Delivery status transitions are auditable via `DeliveryAuditLog`
 
-### Adding new dependencies
+## Authentication
+- Username/email + password login
+- Google OAuth route: `/accounts/google/login/` (available when `django-allauth` is installed and configured)
+
+## Testing
+Run full tests:
 ```bash
-pip install <package-name>
-pip freeze > requirements.txt
+python manage.py test users fishing
 ```
 
-### Creating new Django apps
+Run checks:
 ```bash
-python manage.py startapp <app-name>
+python manage.py check
 ```
 
-### Database migrations
-```bash
-python manage.py makemigrations
-python manage.py migrate
-```
+## Security Notes
+- Keep secrets only in `.env`
+- Never commit real API keys or OAuth secrets
+- `.env` is git-ignored
 
-## 🎯 Features (Planned)
-
-- [ ] User registration and profiles
-- [ ] Catch logging and tracking
-- [ ] Educational content library
-- [ ] Community timeline and posts
-- [ ] Sustainable fishing guidelines
-- [ ] Mobile-responsive design
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
-
-**Quick Start:**
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. **Add yourself to the Contributors list** in [CONTRIBUTING.md](CONTRIBUTING.md)
-5. Push to the branch (`git push origin feature/amazing-feature`)
-6. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the [MIT License](LICENSE) - see the LICENSE file for details.
-
-## 📞 Contact
-
-Project Link: [https://github.com/LewisMagangi/Sustainable_Fishing](https://github.com/LewisMagangi/Sustainable_Fishing)
-
----
-
-Made with ❤️ for sustainable fishing communities
+## License
+MIT License. See `LICENSE`.

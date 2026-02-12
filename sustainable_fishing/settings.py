@@ -29,7 +29,9 @@ CSRF_TRUSTED_ORIGINS = [
     "https://sustainablefishing.onrender.com",
     "https://*.ngrok.io",
     "https://*.ngrok-free.app",
+    "https://*.ngrok-free.dev",
     "https://*.ngrok.app",
+    "https://albert-incult-superfluously.ngrok-free.dev",
 ]
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8000",
@@ -37,7 +39,9 @@ CORS_ALLOWED_ORIGINS = [
     "https://sustainablefishing.onrender.com",
     "https://*.ngrok.io",
     "https://*.ngrok-free.app",
+    "https://*.ngrok-free.dev",
     "https://*.ngrok.app",
+    "https://albert-incult-superfluously.ngrok-free.dev",
 ]
 
 
