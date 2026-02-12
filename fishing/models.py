@@ -405,3 +405,44 @@ class SellerNotification(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+
+class ChairmanApprovalRequest(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('APPROVED', 'Approved'),
+        ('REJECTED', 'Rejected'),
+    ]
+
+    fisherman = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='chairman_approval_request')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    notes = models.TextField(blank=True)
+    requested_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reviewed_chairman_requests'
+    )
+
+    class Meta:
+        ordering = ['-requested_at']
+
+    def __str__(self):
+        return f"Chairman approval for {self.fisherman.username}: {self.status}"
+
+
+class PlatformFeeLog(models.Model):
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='platform_fee_logs')
+    payment_transaction = models.ForeignKey(PaymentTransaction, on_delete=models.CASCADE, related_name='platform_fee_logs')
+    fisherman = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='platform_fee_logs')
+    fee_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    gross_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    net_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    logged_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-logged_at']
+        unique_together = ('payment_transaction', 'order')

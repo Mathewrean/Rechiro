@@ -35,6 +35,7 @@ class UserRegistrationForm(UserCreationForm):
                 FishermanProfile.objects.create(
                     user=user,
                     phone=user.phone,
+                    landing_site=user.location,
                     location=user.location,
                     contact_details=''
                 )
@@ -67,7 +68,7 @@ class FishermanProfileForm(forms.ModelForm):
     class Meta:
         model = FishermanProfile
         fields = (
-            'phone', 'business_name', 'location', 'address', 'contact_details', 'fulfillment_method',
+            'phone', 'business_name', 'landing_site', 'location', 'address', 'contact_details', 'fulfillment_method',
             'mpesa_phone', 'mpesa_payment_type', 'mpesa_till_number', 'mpesa_paybill_number', 'mpesa_account_reference'
         )
         widgets = {
@@ -127,6 +128,7 @@ class ProfileUpdateForm(forms.ModelForm):
                     FishermanProfile.objects.create(
                         user=user,
                         phone=user.phone,
+                        landing_site=user.location,
                         location=user.location,
                         contact_details=''
                     )

@@ -6,6 +6,7 @@ app_name = 'users'
 urlpatterns = [
     # Authentication URLs
     path('register/', views.register_view, name='register'),
+    path('verify-email/<str:token>/', views.verify_email_view, name='verify_email'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     
@@ -22,4 +23,3 @@ urlpatterns = [
     # API URLs
     path('api/stats/', views.api_user_stats, name='api_user_stats'),
 ]
-

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     Fish, Cart, CartItem, Order, OrderItem, PaymentTransaction, Delivery,
-    FishTransactionLog, PickupPoint, DeliveryAuditLog, SellerNotification
+    FishTransactionLog, PickupPoint, DeliveryAuditLog, SellerNotification, PlatformFeeLog, ChairmanApprovalRequest
 )
 
 
@@ -101,3 +101,17 @@ class SellerNotificationAdmin(admin.ModelAdmin):
     list_display = ('fisherman', 'order', 'fish_item', 'total_amount', 'net_earnings', 'receipt_number', 'is_read', 'created_at')
     list_filter = ('is_read', 'created_at')
     search_fields = ('fisherman__username', 'order__order_number', 'fish_item', 'receipt_number')
+
+
+@admin.register(PlatformFeeLog)
+class PlatformFeeLogAdmin(admin.ModelAdmin):
+    list_display = ('order', 'payment_transaction', 'fisherman', 'gross_amount', 'fee_amount', 'net_amount', 'logged_at')
+    list_filter = ('logged_at',)
+    search_fields = ('order__order_number', 'payment_transaction__checkout_request_id', 'fisherman__username')
+
+
+@admin.register(ChairmanApprovalRequest)
+class ChairmanApprovalRequestAdmin(admin.ModelAdmin):
+    list_display = ('fisherman', 'status', 'reviewed_by', 'requested_at', 'reviewed_at')
+    list_filter = ('status', 'requested_at', 'reviewed_at')
+    search_fields = ('fisherman__username', 'reviewed_by__username', 'notes')

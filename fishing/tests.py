@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from users.models import User, FishermanProfile, CustomerProfile
+from users.models import PhoneVerificationTransaction
 from .models import (
     Fish,
     Cart,
@@ -17,6 +18,7 @@ from .models import (
     PickupPoint,
     DeliveryAuditLog,
     SellerNotification,
+    ChairmanApprovalRequest,
 )
 
 
@@ -28,6 +30,7 @@ class CheckoutAndPaymentFlowTests(TestCase):
             role='customer',
             phone='0712345678',
             email='buyer@example.com',
+            email_verified=True,
         )
         CustomerProfile.objects.create(
             user=self.customer,
@@ -42,6 +45,7 @@ class CheckoutAndPaymentFlowTests(TestCase):
             role='fisherman',
             phone='0700000000',
             email='fisher@example.com',
+            phone_verified=True,
         )
         FishermanProfile.objects.create(
             user=self.fisherman,
@@ -308,6 +312,38 @@ class CheckoutAndPaymentFlowTests(TestCase):
         latest = body['notifications'][0]
         self.assertEqual(latest['receipt_number'], 'NOTICE6')
 
+    def test_phone_verification_callback_marks_user_phone_verified(self):
+        self.fisherman.phone_verified = False
+        self.fisherman.save(update_fields=['phone_verified'])
+        PhoneVerificationTransaction.objects.create(
+            user=self.fisherman,
+            phone_number='0700000000',
+            amount=Decimal('1.00'),
+            checkout_request_id='VERIFY-CRQ1',
+            merchant_request_id='VERIFY-MRQ1',
+            status='PENDING',
+        )
+        payload = {
+            'Body': {
+                'stkCallback': {
+                    'MerchantRequestID': 'VERIFY-MRQ1',
+                    'CheckoutRequestID': 'VERIFY-CRQ1',
+                    'ResultCode': 0,
+                    'ResultDesc': 'Success',
+                    'CallbackMetadata': {
+                        'Item': [
+                            {'Name': 'Amount', 'Value': 1},
+                            {'Name': 'MpesaReceiptNumber', 'Value': 'PV12345'},
+                        ]
+                    }
+                }
+            }
+        }
+        response = self.client.post(reverse('fishing:mpesa_callback'), data=json.dumps(payload), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.fisherman.refresh_from_db()
+        self.assertTrue(self.fisherman.phone_verified)
+
     @patch('fishing.views.initiate_stk_push')
     def test_callback_amount_mismatch_rejected(self, mock_stk):
         mock_stk.return_value = {
@@ -351,7 +387,7 @@ class CheckoutAndPaymentFlowTests(TestCase):
 class DeliveryAndPickupEndpointsTests(TestCase):
     def setUp(self):
         self.customer = User.objects.create_user(
-            username='customer1', password='testpass123', role='customer', phone='0711111111', email='c1@example.com'
+            username='customer1', password='testpass123', role='customer', phone='0711111111', email='c1@example.com', email_verified=True
         )
         self.delivery_user = User.objects.create_user(
             username='deliver1', password='testpass123', role='delivery', phone='0722222222', email='d1@example.com'
@@ -423,13 +459,16 @@ class FishImageUploadTests(TestCase):
             role='fisherman',
             phone='0700011111',
             email='imgfisher@example.com',
+            phone_verified=True,
         )
         FishermanProfile.objects.create(
             user=self.fisherman,
             phone='0700011111',
+            landing_site='Lake',
             location='Lake',
             contact_details='Dock',
             is_verified=True,
+            chairman_approved=True,
             mpesa_phone='0700011111',
         )
 
@@ -490,3 +529,52 @@ class FishImageUploadTests(TestCase):
         fish.refresh_from_db()
         self.assertTrue(bool(fish.image))
         self.assertNotEqual(fish.image.name, old_name)
+
+
+class ChairmanApprovalWorkflowTests(TestCase):
+    def setUp(self):
+        self.fisherman = User.objects.create_user(
+            username='fisher2',
+            password='testpass123',
+            role='fisherman',
+            phone='0700099999',
+            email='f2@example.com',
+            phone_verified=True,
+        )
+        self.profile = FishermanProfile.objects.create(
+            user=self.fisherman,
+            phone='0700099999',
+            landing_site='Bondo',
+            location='Bondo',
+            contact_details='Pier',
+            mpesa_phone='0700099999',
+        )
+        self.reviewer = User.objects.create_user(
+            username='deliveryboss',
+            password='testpass123',
+            role='delivery',
+            phone='0700088888',
+            email='d2@example.com',
+        )
+
+    def test_fisherman_can_submit_approval_request(self):
+        self.client.login(username='fisher2', password='testpass123')
+        response = self.client.post(reverse('fishing:request_chairman_approval'), {'notes': 'Ready for review'})
+        self.assertEqual(response.status_code, 302)
+        request_obj = ChairmanApprovalRequest.objects.get(fisherman=self.fisherman)
+        self.assertEqual(request_obj.status, 'PENDING')
+        self.assertEqual(request_obj.notes, 'Ready for review')
+
+    def test_delivery_role_can_approve_request(self):
+        req = ChairmanApprovalRequest.objects.create(fisherman=self.fisherman, status='PENDING', notes='Please verify')
+        self.client.login(username='deliveryboss', password='testpass123')
+        response = self.client.post(
+            reverse('fishing:review_chairman_approval', args=[req.id]),
+            {'action': 'approve', 'notes': 'Approved by chairman'}
+        )
+        self.assertEqual(response.status_code, 302)
+        req.refresh_from_db()
+        self.profile.refresh_from_db()
+        self.assertEqual(req.status, 'APPROVED')
+        self.assertEqual(req.reviewed_by, self.reviewer)
+        self.assertTrue(self.profile.chairman_approved)

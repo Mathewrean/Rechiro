@@ -3,6 +3,9 @@ from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
+from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
+from django.core.mail import send_mail
+from django.conf import settings
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.views.decorators.http import require_http_methods
@@ -13,7 +16,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.views.generic import UpdateView, DetailView, ListView
 
-from .models import User, FishermanProfile, CustomerProfile
+from .models import User, FishermanProfile, CustomerProfile, PhoneVerificationTransaction
 from .forms import UserRegistrationForm, UserLoginForm, ProfileUpdateForm, PasswordChangeForm, FishermanProfileForm, CustomerProfileForm
 from fishing.models import Fish, Order
 
@@ -28,6 +31,53 @@ def register_view(request):
         if form.is_valid():
             user = form.save()
             username = form.cleaned_data.get('username')
+
+            # Lightweight email verification for all users.
+            signer = TimestampSigner()
+            token = signer.sign(user.pk)
+            verify_link = request.build_absolute_uri(reverse_lazy('users:verify_email', kwargs={'token': token}))
+            try:
+                send_mail(
+                    subject='Verify your FishNet account email',
+                    message=f'Hello {user.full_name or user.username}, verify your email: {verify_link}',
+                    from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@fishnet.local'),
+                    recipient_list=[user.email],
+                    fail_silently=True,
+                )
+            except Exception:
+                pass
+
+            # Seller phone ownership verification: KES 1 STK push.
+            if user.role == 'fisherman':
+                from fishing.mpesa_service import initiate_stk_push
+                verification_ref = f"PHONE-VERIFY-{user.id}"
+                stk_result = initiate_stk_push(
+                    phone_number=user.phone,
+                    amount=1,
+                    order_number=verification_ref,
+                    transaction_type='CustomerPayBillOnline',
+                )
+                if stk_result.get('success'):
+                    PhoneVerificationTransaction.objects.create(
+                        user=user,
+                        phone_number=user.phone,
+                        amount=1,
+                        merchant_request_id=stk_result.get('merchant_request_id', ''),
+                        checkout_request_id=stk_result.get('checkout_request_id', ''),
+                        status='PENDING',
+                    )
+                    messages.info(
+                        request,
+                        'Account created. Complete the KES 1 phone verification STK push to activate seller listing access.'
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        f'Account created, but phone verification STK failed: {stk_result.get("error", "Unknown error")}'
+                    )
+            else:
+                messages.info(request, 'Account created. Please verify your email before checkout.')
+
             messages.success(request, f'Account created successfully for {username}! Please log in to continue.')
             return redirect('users:login')
     else:
@@ -53,6 +103,8 @@ def login_view(request):
             user = authenticate(username=username, password=password)
             if user is not None:
                 login(request, user)
+                if not user.email_verified:
+                    messages.warning(request, 'Please verify your email to unlock full purchase features.')
                 messages.success(request, f'Welcome back, {user.full_name or user.username}!')
                 next_url = request.GET.get('next')
                 # Redirect to appropriate dashboard based on role
@@ -130,6 +182,7 @@ def edit_profile_view(request):
                 user=user,
                 defaults={
                     'phone': user.phone or '',
+                    'landing_site': user.location or '',
                     'location': user.location or '',
                     'contact_details': '',
                 }
@@ -174,6 +227,7 @@ def edit_profile_view(request):
                 user=user,
                 defaults={
                     'phone': user.phone or '',
+                    'landing_site': user.location or '',
                     'location': user.location or '',
                     'contact_details': '',
                 }
@@ -231,6 +285,20 @@ def dashboard_view(request):
     else:
         # Admin or other roles
         return redirect('users:profile')
+
+
+def verify_email_view(request, token):
+    """Verify user email via signed token."""
+    signer = TimestampSigner()
+    try:
+        user_id = signer.unsign(token, max_age=60 * 60 * 24 * 7)  # 7 days
+        user = User.objects.get(pk=user_id)
+        user.email_verified = True
+        user.save(update_fields=['email_verified'])
+        messages.success(request, 'Email verified successfully. You can now purchase with confidence.')
+    except (BadSignature, SignatureExpired, User.DoesNotExist):
+        messages.error(request, 'Invalid or expired verification link.')
+    return redirect('users:login')
 
 
 @login_required

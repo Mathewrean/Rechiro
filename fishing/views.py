@@ -15,10 +15,11 @@ from urllib.parse import urlparse
 
 from .models import (
     Fish, Cart, CartItem, Order, OrderItem, PaymentTransaction, Delivery, FishTransactionLog,
-    PickupPoint, DeliveryAuditLog, SellerNotification
+    PickupPoint, DeliveryAuditLog, SellerNotification, PlatformFeeLog, ChairmanApprovalRequest
 )
 from .mpesa_service import initiate_stk_push, process_payment_callback
 from users.models import FishermanProfile, CustomerProfile
+from users.models import PhoneVerificationTransaction
 
 logger = logging.getLogger(__name__)
 
@@ -275,6 +276,9 @@ def checkout_initiate(request):
     if not items:
         messages.error(request, 'Your cart is empty.')
         return redirect('fishing:marketplace')
+    if request.user.role == 'customer' and not request.user.email_verified:
+        messages.error(request, 'Please verify your email before completing checkout.')
+        return redirect('users:profile')
     if not request.user.phone:
         messages.error(request, 'Please add a phone number to your profile.')
         return redirect('users:edit_profile')
@@ -327,6 +331,9 @@ def checkout_process(request):
     if not items:
         messages.error(request, 'Your cart is empty.')
         return redirect('fishing:marketplace')
+    if request.user.role == 'customer' and not request.user.email_verified:
+        messages.error(request, 'Please verify your email before completing checkout.')
+        return redirect('users:profile')
     if not _is_public_callback_url(getattr(settings, 'MPESA_CALLBACK_URL', '')):
         messages.error(
             request,
@@ -512,8 +519,40 @@ def mpesa_callback(request):
                     checkout_request_id=checkout_request_id
                 )
             except PaymentTransaction.DoesNotExist:
-                logger.error('Transaction not found for checkout_request_id=%s', checkout_request_id)
-                return JsonResponse({'status': 'error', 'message': 'Transaction not found'}, status=404)
+                # Fallback: phone ownership verification callbacks.
+                try:
+                    verification_txn = PhoneVerificationTransaction.objects.select_for_update().select_related('user').get(
+                        checkout_request_id=checkout_request_id
+                    )
+                except PhoneVerificationTransaction.DoesNotExist:
+                    logger.error('Transaction not found for checkout_request_id=%s', checkout_request_id)
+                    return JsonResponse({'status': 'error', 'message': 'Transaction not found'}, status=404)
+
+                if verification_txn.status == 'COMPLETED':
+                    return JsonResponse({'status': 'success', 'message': 'Phone verification already processed'})
+
+                result_code = result.get('result_code')
+                try:
+                    normalized_result_code = int(result_code)
+                except (TypeError, ValueError):
+                    normalized_result_code = -1
+
+                verification_txn.result_code = normalized_result_code
+                verification_txn.result_desc = result.get('result_desc', '')
+                if normalized_result_code == 0 and result.get('success'):
+                    verification_txn.status = 'COMPLETED'
+                    verification_txn.mpesa_receipt_number = result.get('transaction_id', '') or ''
+                    verification_txn.save(update_fields=[
+                        'status', 'mpesa_receipt_number', 'result_code', 'result_desc', 'updated_at'
+                    ])
+                    verification_txn.user.phone_verified = True
+                    verification_txn.user.save(update_fields=['phone_verified'])
+                    logger.info('Seller phone verified for user_id=%s via checkout_request_id=%s', verification_txn.user_id, checkout_request_id)
+                    return JsonResponse({'status': 'success', 'message': 'Phone verification completed'})
+
+                verification_txn.status = 'FAILED'
+                verification_txn.save(update_fields=['status', 'result_code', 'result_desc', 'updated_at'])
+                return JsonResponse({'status': 'failed', 'message': 'Phone verification failed'})
 
             order = payment_txn.order
 
@@ -589,6 +628,16 @@ def mpesa_callback(request):
                                 f'{payment_txn.weight_kg}kg, KES {payment_txn.amount}, '
                                 f'net KES {payment_txn.net_payout}, receipt {payment_txn.mpesa_receipt_number}.'
                             ),
+                        }
+                    )
+                    PlatformFeeLog.objects.get_or_create(
+                        order=order,
+                        payment_transaction=payment_txn,
+                        defaults={
+                            'fisherman': payment_txn.fisherman,
+                            'fee_amount': payment_txn.platform_fee,
+                            'gross_amount': payment_txn.amount,
+                            'net_amount': payment_txn.net_payout,
                         }
                     )
 
@@ -737,6 +786,7 @@ def fisherman_dashboard(request):
     recent_orders = my_order_items.order_by('-order__created_at')[:10]
     notifications = SellerNotification.objects.filter(fisherman=request.user).order_by('-created_at')[:10]
     unread_notifications_count = SellerNotification.objects.filter(fisherman=request.user, is_read=False).count()
+    approval_request = ChairmanApprovalRequest.objects.filter(fisherman=request.user).first()
     
     context = {
         'profile': profile,
@@ -753,6 +803,7 @@ def fisherman_dashboard(request):
         'pending_orders': pending_orders,
         'notifications': notifications,
         'unread_notifications_count': unread_notifications_count,
+        'approval_request': approval_request,
     }
     return render(request, 'fishing/fisherman_dashboard.html', context)
 
@@ -782,6 +833,17 @@ def add_fish(request):
     """Add new fish listing"""
     if request.user.role != 'fisherman':
         messages.error(request, 'Access denied. Fisherman account required.')
+        return redirect('users:profile')
+    try:
+        fisher_profile = request.user.fisherman_profile
+    except FishermanProfile.DoesNotExist:
+        messages.error(request, 'Complete fisherman profile first.')
+        return redirect('users:edit_profile')
+    if not request.user.phone_verified:
+        messages.error(request, 'Complete KES 1 phone ownership verification before listing fish.')
+        return redirect('users:profile')
+    if not fisher_profile.chairman_approved:
+        messages.error(request, 'Your listing access is pending Lake Chairman approval.')
         return redirect('users:profile')
     
     if request.method == 'POST':
@@ -1127,6 +1189,101 @@ def manage_pickup_points(request):
 
     points = PickupPoint.objects.all().order_by('name')
     return render(request, 'fishing/manage_pickup_points.html', {'pickup_points': points})
+
+
+@login_required
+@require_http_methods(['POST'])
+def request_chairman_approval(request):
+    if request.user.role != 'fisherman':
+        messages.error(request, 'Access denied.')
+        return redirect('users:profile')
+
+    try:
+        profile = request.user.fisherman_profile
+    except FishermanProfile.DoesNotExist:
+        messages.error(request, 'Complete your fisherman profile first.')
+        return redirect('users:edit_profile')
+
+    if not request.user.phone_verified:
+        messages.error(request, 'Complete KES 1 phone verification first.')
+        return redirect('users:profile')
+
+    notes = request.POST.get('notes', '').strip()
+    approval_request, created = ChairmanApprovalRequest.objects.get_or_create(
+        fisherman=request.user,
+        defaults={'notes': notes, 'status': 'PENDING'}
+    )
+    if not created:
+        approval_request.status = 'PENDING'
+        approval_request.notes = notes
+        approval_request.reviewed_at = None
+        approval_request.reviewed_by = None
+        approval_request.save(update_fields=['status', 'notes', 'reviewed_at', 'reviewed_by'])
+
+    if profile.chairman_approved:
+        profile.chairman_approved = False
+        profile.chairman_name = ''
+        profile.save(update_fields=['chairman_approved', 'chairman_name', 'updated_at'])
+
+    messages.success(request, 'Chairman approval request submitted.')
+    return redirect('fishing:fisherman_dashboard')
+
+
+@login_required
+def chairman_approval_queue(request):
+    if request.user.role not in ['delivery', 'admin'] and not request.user.is_staff:
+        messages.error(request, 'Access denied.')
+        return redirect('fishing:marketplace')
+
+    pending_requests = ChairmanApprovalRequest.objects.filter(status='PENDING').select_related(
+        'fisherman', 'fisherman__fisherman_profile'
+    )
+    recent_requests = ChairmanApprovalRequest.objects.exclude(status='PENDING').select_related(
+        'fisherman', 'reviewed_by'
+    )[:30]
+    return render(request, 'fishing/chairman_approval_queue.html', {
+        'pending_requests': pending_requests,
+        'recent_requests': recent_requests,
+    })
+
+
+@login_required
+@require_http_methods(['POST'])
+def review_chairman_approval(request, request_id):
+    if request.user.role not in ['delivery', 'admin'] and not request.user.is_staff:
+        return JsonResponse({'success': False, 'error': 'Forbidden'}, status=403)
+
+    approval_request = get_object_or_404(
+        ChairmanApprovalRequest.objects.select_related('fisherman', 'fisherman__fisherman_profile'),
+        id=request_id
+    )
+    action = request.POST.get('action')
+    notes = request.POST.get('notes', '').strip()
+    if action not in ['approve', 'reject']:
+        messages.error(request, 'Invalid action.')
+        return redirect('fishing:chairman_approval_queue')
+
+    profile = getattr(approval_request.fisherman, 'fisherman_profile', None)
+    if not profile:
+        messages.error(request, 'Fisherman profile not found.')
+        return redirect('fishing:chairman_approval_queue')
+
+    approval_request.status = 'APPROVED' if action == 'approve' else 'REJECTED'
+    approval_request.notes = notes
+    approval_request.reviewed_at = timezone.now()
+    approval_request.reviewed_by = request.user
+    approval_request.save(update_fields=['status', 'notes', 'reviewed_at', 'reviewed_by'])
+
+    if action == 'approve':
+        profile.chairman_approved = True
+        profile.chairman_name = request.user.full_name or request.user.username
+        messages.success(request, f'Approved {approval_request.fisherman.username}.')
+    else:
+        profile.chairman_approved = False
+        profile.chairman_name = ''
+        messages.success(request, f'Rejected {approval_request.fisherman.username}.')
+    profile.save(update_fields=['chairman_approved', 'chairman_name', 'updated_at'])
+    return redirect('fishing:chairman_approval_queue')
 
 
 @login_required
