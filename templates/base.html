@@ -71,6 +71,11 @@
                         <a href="{% url 'fishing:order_list' %}" class="text-white/90 hover:text-white hover:bg-white/10 px-3 py-2 rounded-md font-medium transition-all duration-300">
                             <i class="fas fa-clipboard-list mr-1"></i>Orders
                         </a>
+                        {% if user.role == 'delivery' or user.role == 'admin' or user.is_staff %}
+                        <a href="{% url 'fishing:chairman_approval_queue' %}" class="text-white/90 hover:text-white hover:bg-white/10 px-3 py-2 rounded-md font-medium transition-all duration-300">
+                            <i class="fas fa-user-check mr-1"></i>Approvals
+                        </a>
+                        {% endif %}
                         
                         <!-- Cart icon -->
                         <a href="{% url 'fishing:cart' %}" class="relative text-white/90 hover:text-white hover:bg-white/10 px-3 py-2 rounded-md font-medium transition-all duration-300">
@@ -170,6 +175,11 @@
                         <a href="{% url 'fishing:order_list' %}" class="flex items-center text-white/90 hover:text-white hover:bg-white/10 px-3 py-3 rounded-md font-medium transition-all duration-300">
                             <i class="fas fa-clipboard-list mr-3 w-5"></i>My Orders
                         </a>
+                        {% if user.role == 'delivery' or user.role == 'admin' or user.is_staff %}
+                        <a href="{% url 'fishing:chairman_approval_queue' %}" class="flex items-center text-white/90 hover:text-white hover:bg-white/10 px-3 py-3 rounded-md font-medium transition-all duration-300">
+                            <i class="fas fa-user-check mr-3 w-5"></i>Approvals
+                        </a>
+                        {% endif %}
                         <a href="{% url 'fishing:cart' %}" class="flex items-center text-white/90 hover:text-white hover:bg-white/10 px-3 py-3 rounded-md font-medium transition-all duration-300">
                             <i class="fas fa-shopping-cart mr-3 w-5"></i>Cart
                         </a>
@@ -395,4 +405,3 @@
     {% endblock %}
 </body>
 </html>
-
