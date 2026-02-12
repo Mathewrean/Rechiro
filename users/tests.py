@@ -35,3 +35,12 @@ class AuthEndpointsTests(TestCase):
             self.skipTest('allauth not installed in this environment')
         response = self.client.get('/accounts/google/login/')
         self.assertIn(response.status_code, [200, 302])
+
+    def test_resend_email_verification_requires_login(self):
+        response = self.client.post(reverse('users:resend_email_verification'))
+        self.assertEqual(response.status_code, 302)
+
+    def test_logged_in_user_can_trigger_resend_email_verification(self):
+        self.client.login(username='authuser', password='testpass123')
+        response = self.client.post(reverse('users:resend_email_verification'))
+        self.assertEqual(response.status_code, 302)

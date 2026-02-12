@@ -21,6 +21,26 @@ from .forms import UserRegistrationForm, UserLoginForm, ProfileUpdateForm, Passw
 from fishing.models import Fish, Order
 
 
+def _build_email_verification_link(request, user):
+    signer = TimestampSigner()
+    token = signer.sign(user.pk)
+    return request.build_absolute_uri(
+        reverse_lazy('users:verify_email', kwargs={'token': token})
+    )
+
+
+def _send_email_verification_link(request, user):
+    verify_link = _build_email_verification_link(request, user)
+    send_mail(
+        subject='Verify your FishNet account email',
+        message=f'Hello {user.full_name or user.username}, verify your email: {verify_link}',
+        from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@fishnet.local'),
+        recipient_list=[user.email],
+        fail_silently=True,
+    )
+    return verify_link
+
+
 def register_view(request):
     """Handle user registration"""
     if request.user.is_authenticated:
@@ -33,17 +53,10 @@ def register_view(request):
             username = form.cleaned_data.get('username')
 
             # Lightweight email verification for all users.
-            signer = TimestampSigner()
-            token = signer.sign(user.pk)
-            verify_link = request.build_absolute_uri(reverse_lazy('users:verify_email', kwargs={'token': token}))
             try:
-                send_mail(
-                    subject='Verify your FishNet account email',
-                    message=f'Hello {user.full_name or user.username}, verify your email: {verify_link}',
-                    from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@fishnet.local'),
-                    recipient_list=[user.email],
-                    fail_silently=True,
-                )
+                verify_link = _send_email_verification_link(request, user)
+                if settings.DEBUG:
+                    messages.info(request, f'Email verification link (dev): {verify_link}')
             except Exception:
                 pass
 
@@ -137,6 +150,10 @@ def profile_view(request):
     """Display user profile"""
     user = request.user
     
+    email_verify_link = ''
+    if not user.email_verified and settings.DEBUG and user.email:
+        email_verify_link = _build_email_verification_link(request, user)
+
     if user.role == 'fisherman':
         # Get fisherman stats
         profile = user.get_fisherman_profile()
@@ -148,6 +165,7 @@ def profile_view(request):
             'fish_listings': fish_listings[:5],
             'total_listings': fish_listings.count(),
             'total_sales': total_sales,
+            'email_verify_link': email_verify_link,
             'title': f'{user.full_name or user.username} - Profile'
         }
     else:
@@ -162,6 +180,7 @@ def profile_view(request):
             'orders': orders[:5],
             'total_orders': total_orders,
             'completed_orders': completed_orders,
+            'email_verify_link': email_verify_link,
             'title': f'{user.full_name or user.username} - Profile'
         }
     
@@ -299,6 +318,26 @@ def verify_email_view(request, token):
     except (BadSignature, SignatureExpired, User.DoesNotExist):
         messages.error(request, 'Invalid or expired verification link.')
     return redirect('users:login')
+
+
+@login_required
+@require_http_methods(['POST'])
+def resend_email_verification_view(request):
+    user = request.user
+    if user.email_verified:
+        messages.info(request, 'Your email is already verified.')
+        return redirect('users:profile')
+    if not user.email:
+        messages.error(request, 'Add an email address in your profile first.')
+        return redirect('users:edit_profile')
+    try:
+        verify_link = _send_email_verification_link(request, user)
+        if settings.DEBUG:
+            messages.info(request, f'Email verification link (dev): {verify_link}')
+        messages.success(request, 'Verification email sent. Check your inbox.')
+    except Exception:
+        messages.error(request, 'Failed to send verification email. Try again.')
+    return redirect('users:profile')
 
 
 @login_required

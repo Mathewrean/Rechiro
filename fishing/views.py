@@ -277,7 +277,7 @@ def checkout_initiate(request):
         messages.error(request, 'Your cart is empty.')
         return redirect('fishing:marketplace')
     if request.user.role == 'customer' and not request.user.email_verified:
-        messages.error(request, 'Please verify your email before completing checkout.')
+        messages.error(request, 'Please verify your email before checkout. Go to Profile and click "Send Verification Email".')
         return redirect('users:profile')
     if not request.user.phone:
         messages.error(request, 'Please add a phone number to your profile.')
@@ -332,7 +332,7 @@ def checkout_process(request):
         messages.error(request, 'Your cart is empty.')
         return redirect('fishing:marketplace')
     if request.user.role == 'customer' and not request.user.email_verified:
-        messages.error(request, 'Please verify your email before completing checkout.')
+        messages.error(request, 'Please verify your email before checkout. Go to Profile and click "Send Verification Email".')
         return redirect('users:profile')
     if not _is_public_callback_url(getattr(settings, 'MPESA_CALLBACK_URL', '')):
         messages.error(
