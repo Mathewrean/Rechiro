@@ -1,18 +1,40 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}FishNet - Fresh Fish Marketplace{% endblock %}</title>
+    <title>{% block title %}Rechiro - Digital Fish Marketplace{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
+            --brand-primary: #0b5d66;
+            --brand-secondary: #2a9d8f;
+            --brand-accent: #f4a261;
             --form-border: #d1d5db;
-            --form-focus: #0066cc;
+            --form-focus: var(--brand-primary);
             --form-bg: #ffffff;
-            --form-bg-soft: #f8fafc;
+            --form-bg-soft: #f7faf9;
+        }
+        body {
+            background: #f5f7f8;
+            color: #1f2937;
+        }
+        .brand-shell {
+            background: linear-gradient(90deg, var(--brand-primary), #0a4f58);
+        }
+        .brand-logo {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 0.5rem;
+            object-fit: cover;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.22);
+        }
+        .brand-title {
+            font-weight: 700;
+            letter-spacing: 0.01em;
         }
         main form input[type="text"],
         main form input[type="email"],
@@ -104,9 +126,9 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: '#0066cc',
-                        secondary: '#004d99',
-                        accent: '#00b4d8',
+                        primary: '#0b5d66',
+                        secondary: '#2a9d8f',
+                        accent: '#f4a261',
                     },
                     fontFamily: {
                         'inter': ['Inter', 'sans-serif'],
@@ -138,11 +160,12 @@
 </head>
 <body class="font-inter leading-relaxed text-gray-800 bg-white">
     <!-- Desktop Top Navigation -->
-    <nav class="hidden lg:block fixed top-0 w-full bg-gradient-to-r from-blue-600 to-blue-800 shadow-lg z-50 backdrop-blur-md">
+    <nav class="hidden lg:block fixed top-0 w-full brand-shell shadow-lg z-50 backdrop-blur-md">
         <div class="container mx-auto px-4 relative">
             <div class="flex items-center justify-between h-16">
-                <a href="{% url 'fishing:home' %}" class="flex items-center text-white font-bold text-xl hover:scale-105 transition-transform duration-300">
-                    <i class="fas fa-fish mr-2"></i>FishNet
+                <a href="{% url 'fishing:home' %}" class="flex items-center text-white text-xl hover:scale-105 transition-transform duration-300">
+                    <img src="{% static 'branding/rechiro-logo.svg' %}" alt="Rechiro logo" class="brand-logo mr-2">
+                    <span class="brand-title">Rechiro</span>
                 </a>
                 
                 <!-- Desktop menu -->
@@ -218,10 +241,11 @@
     </nav>
 
     <!-- Mobile menu button (fixed top bar for mobile) -->
-    <div class="lg:hidden fixed top-0 w-full bg-gradient-to-r from-blue-600 to-blue-800 shadow-lg z-50 backdrop-blur-md">
+    <div class="lg:hidden fixed top-0 w-full brand-shell shadow-lg z-50 backdrop-blur-md">
         <div class="flex items-center justify-between h-16 px-4">
-            <a href="{% url 'fishing:home' %}" class="flex items-center text-white font-bold text-xl">
-                <i class="fas fa-fish mr-2"></i>FishNet
+            <a href="{% url 'fishing:home' %}" class="flex items-center text-white text-xl">
+                <img src="{% static 'branding/rechiro-logo.svg' %}" alt="Rechiro logo" class="brand-logo mr-2">
+                <span class="brand-title">Rechiro</span>
             </a>
             {% if user.is_authenticated %}
             <a href="{% url 'fishing:cart' %}" class="relative text-white mr-4">
@@ -241,12 +265,13 @@
     <div class="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40 opacity-0 invisible transition-all duration-300" id="mobile-overlay"></div>
 
     <!-- Mobile Left Sidebar Navigation -->
-    <nav class="lg:hidden fixed left-0 top-0 h-full w-64 bg-gradient-to-b from-blue-600 to-blue-800 shadow-lg z-50 backdrop-blur-md transform -translate-x-full transition-transform duration-300" id="mobile-sidebar">
+    <nav class="lg:hidden fixed left-0 top-0 h-full w-64 brand-shell shadow-lg z-50 backdrop-blur-md transform -translate-x-full transition-transform duration-300" id="mobile-sidebar">
         <div class="flex flex-col h-full">
             <!-- Logo section -->
             <div class="flex items-center justify-between h-16 px-4 border-b border-white/20">
-                <a href="{% url 'fishing:home' %}" class="flex items-center text-white font-bold text-xl">
-                    <i class="fas fa-fish mr-2"></i>FishNet
+                <a href="{% url 'fishing:home' %}" class="flex items-center text-white text-xl">
+                    <img src="{% static 'branding/rechiro-logo.svg' %}" alt="Rechiro logo" class="brand-logo mr-2">
+                    <span class="brand-title">Rechiro</span>
                 </a>
                 <button class="text-white hover:text-gray-200 focus:outline-none" id="sidebar-close-btn">
                     <i class="fas fa-times text-xl"></i>
@@ -389,8 +414,9 @@
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8">
                 <!-- Company info -->
                 <div class="lg:col-span-1">
-                    <h5 class="text-blue-400 text-lg font-bold mb-4">
-                        <i class="fas fa-fish mr-2"></i>FishNet
+                    <h5 class="text-blue-300 text-lg font-bold mb-4 flex items-center">
+                        <img src="{% static 'branding/rechiro-logo.svg' %}" alt="Rechiro logo" class="brand-logo mr-2">
+                        <span class="brand-title">Rechiro</span>
                     </h5>
                     <p class="text-gray-300 text-sm mb-4">
                         Fresh fish directly from local fishermen. Support sustainable fishing.
@@ -444,7 +470,7 @@
             
             <hr class="my-6 border-gray-600">
             <div class="flex flex-col md:flex-row justify-between items-center text-sm text-gray-400">
-                <p>&copy; 2025 FishNet. All rights reserved.</p>
+                <p>&copy; 2025 Rechiro. All rights reserved.</p>
                 <p class="mt-2 md:mt-0">Fresh Fish. Direct from Fishermen.</p>
             </div>
         </div>

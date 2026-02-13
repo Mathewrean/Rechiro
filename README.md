@@ -1,14 +1,26 @@
-# FishNet (Sustainable Fishing)
+# Rechiro (Sustainable Fishing)
 
-FishNet is a Django e-commerce platform for direct fish sales from verified fishermen to customers.
+Rechiro is a Django marketplace for direct fish sales between verified Lake Victoria fishermen and customers.
 
-It includes:
+## What It Includes
 - Weight-based fish listings (`price_per_kg * weight_kg`)
 - M-Pesa Daraja STK checkout with callback validation
 - Automatic platform fee accounting (2%) and fisherman net payout (98%)
 - Customer order history and fisherman sales dashboard
-- Pickup-point and delivery workflow with audit logs
-- Email/password authentication plus Google OAuth (via `django-allauth` when installed)
+- Delivery workflow with assignment, tracking, and audit logs
+- Email/password authentication plus Google OAuth (when `django-allauth` is installed)
+- Rechiro branding UI updates across auth, landing, and dashboard pages
+
+## Lake Victoria Fish List
+Fish listing options are limited to Lake Victoria species:
+- Tilapia (Ngege)
+- Nile Perch (Mbuta)
+- African Catfish (Semu)
+- Dagaa / Omena
+- Lungfish (Kamongo)
+- Mudfish
+- Barbel
+- Other (Lake Victoria Species)
 
 ## Tech Stack
 - Python / Django
@@ -18,9 +30,10 @@ It includes:
 
 ## Project Structure
 - `sustainable_fishing/` Django settings and root URLs
-- `users/` custom user model, auth, profile management
+- `users/` user model, auth, profiles, role selection flow
 - `fishing/` marketplace, cart, checkout, payment, delivery, dashboards
 - `templates/` HTML templates
+- `static/branding/` Rechiro brand assets
 
 ## Quick Start
 1. Clone and enter project:
@@ -55,51 +68,51 @@ MPESA_CONSUMER_KEY=your-consumer-key
 MPESA_CONSUMER_SECRET=your-consumer-secret
 MPESA_BUSINESS_SHORT_CODE=174379
 MPESA_PASSKEY=your-passkey
-MPESA_CALLBACK_URL=https://your-ngrok-url.ngrok-free.app/fishing/mpesa/callback/
+MPESA_CALLBACK_URL=https://your-ngrok-url.ngrok-free.app/api/mpesa/callback/
 MPESA_BASE_URL=https://sandbox.safaricom.co.ke
 ```
 
 5. Migrate and run:
 ```bash
 python manage.py migrate
-python manage.py runserver 127.0.0.1:8000
+python manage.py runserver 127.0.0.1:8000 --noreload
 ```
 
 App URL: `http://127.0.0.1:8000/fishing/home/`
 
-## Running with ngrok (for Daraja callbacks)
-In another terminal:
+## Run with ngrok
 ```bash
 ./ngrok http 8000
 ```
-Use the generated HTTPS URL to set `MPESA_CALLBACK_URL` to:
-- `https://<ngrok-domain>/fishing/mpesa/callback/`
+If using a fixed ngrok URL, configure:
+- `MPESA_CALLBACK_URL=https://<your-domain>/api/mpesa/callback/`
 
 ## Core Flows
 
 ### Fisherman Flow
-- Create/edit fish listings with image uploads (supports phone camera capture inputs)
-- Configure M-Pesa profile fields in user profile
-- View sales dashboard: gross revenue, platform fee, net earnings
-- Manage order fulfillment statuses
+- Create/edit fish listings (Lake Victoria species)
+- Configure M-Pesa profile fields
+- View sales metrics and payout breakdown
+- Manage order fulfillment updates
 
 ### Customer Flow
-- Browse fish listings and purchase by weight (kg)
-- Checkout triggers STK requests tied to listing/fisherman config
-- Order is marked paid only after successful callback validation
-- Track order and delivery status history
+- Browse fish listings and purchase by kg
+- Checkout triggers STK requests
+- Order is marked paid only after callback validation
+- Track order and delivery progress
 
-### Delivery / Pickup Flow
-- Add/manage pickup points (`/fishing/pickup-points/manage/`)
-- Delivery/pickup role can update shipment status
-- Delivery status transitions are auditable via `DeliveryAuditLog`
+### Delivery Flow
+- Delivery role manages assigned deliveries
+- Status transitions are logged for traceability
+- Dashboard tracks assigned/completed/pending/failed deliveries
 
-## Authentication
-- Username/email + password login
-- Google OAuth route: `/accounts/google/login/` (available when `django-allauth` is installed and configured)
+### Google OAuth Role Flow
+- Role is selected only after successful Google authentication
+- New social users are routed to `/choose-role/`
+- Role is locked after first selection unless changed by admin
 
 ## Testing
-Run full tests:
+Run tests:
 ```bash
 python manage.py test users fishing
 ```

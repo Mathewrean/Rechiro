@@ -23,6 +23,7 @@ urlpatterns = [
     
     # Dashboard URL
     path('dashboard/', views.dashboard_view, name='dashboard'),
+    path('choose-role/', views.choose_role_view, name='choose_role'),
     
     # API URLs
     path('api/stats/', views.api_user_stats, name='api_user_stats'),

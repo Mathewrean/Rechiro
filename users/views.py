@@ -25,6 +25,29 @@ from .forms import (
 from fishing.models import Fish, Order
 
 
+def _ensure_role_profile(user):
+    if user.role == 'fisherman':
+        FishermanProfile.objects.get_or_create(
+            user=user,
+            defaults={
+                'phone': user.phone or '',
+                'landing_site': user.location or '',
+                'location': user.location or '',
+                'contact_details': '',
+            }
+        )
+    elif user.role == 'customer':
+        CustomerProfile.objects.get_or_create(
+            user=user,
+            defaults={
+                'phone': user.phone or '',
+                'delivery_location': user.location or '',
+                'delivery_address': '',
+                'preferred_fulfillment': 'delivery',
+            }
+        )
+
+
 def _build_email_verification_link(request, user):
     signer = TimestampSigner()
     token = signer.sign(user.pk)
@@ -36,7 +59,7 @@ def _build_email_verification_link(request, user):
 def _send_email_verification_link(request, user):
     verify_link = _build_email_verification_link(request, user)
     send_mail(
-        subject='Verify your FishNet account email',
+        subject='Verify your Rechiro account email',
         message=f'Hello {user.full_name or user.username}, verify your email: {verify_link}',
         from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@fishnet.local'),
         recipient_list=[user.email],
@@ -108,7 +131,7 @@ def register_view(request):
     
     context = {
         'form': form,
-        'title': 'Register - FishNet'
+        'title': 'Register - Rechiro'
     }
     return render(request, 'users/register.html', context)
 
@@ -142,7 +165,7 @@ def login_view(request):
     
     context = {
         'form': form,
-        'title': 'Login - FishNet'
+        'title': 'Login - Rechiro'
     }
     return render(request, 'users/login.html', context)
 
@@ -307,7 +330,7 @@ def edit_profile_view(request):
         'fisherman_form': fisherman_form,
         'customer_form': customer_form,
         'chairman_form': chairman_form,
-        'title': 'Edit Profile - FishNet'
+        'title': 'Edit Profile - Rechiro'
     }
     return render(request, 'users/edit_profile.html', context)
 
@@ -326,7 +349,7 @@ def change_password_view(request):
     
     context = {
         'form': form,
-        'title': 'Change Password - FishNet'
+        'title': 'Change Password - Rechiro'
     }
     return render(request, 'users/change_password.html', context)
 
@@ -335,16 +358,45 @@ def change_password_view(request):
 def dashboard_view(request):
     """Dashboard view redirecting to role-specific dashboards"""
     user = request.user
-    
+
+    if request.session.get('needs_role_selection') or not user.role:
+        return redirect('/choose-role/')
+
     if user.role == 'fisherman':
         return redirect('fishing:fisherman_dashboard')
     elif user.role == 'customer':
         return redirect('fishing:customer_dashboard')
+    elif user.role == 'delivery':
+        return redirect('fishing:delivery_dashboard')
     elif user.role == 'chairman':
         return redirect('fishing:chairman_approval_queue')
     else:
         # Admin or other roles
         return redirect('users:profile')
+
+
+@login_required
+def choose_role_view(request):
+    if request.user.role and not request.session.get('needs_role_selection'):
+        messages.info(request, 'Role is already set. Contact admin to change account role.')
+        return redirect('users:dashboard')
+
+    if request.method == 'POST':
+        selected_role = request.POST.get('role', '').strip()
+        allowed_roles = {'fisherman', 'customer', 'delivery'}
+        if selected_role not in allowed_roles:
+            messages.error(request, 'Invalid role selection.')
+            return redirect('users:choose_role')
+
+        user = request.user
+        user.role = selected_role
+        user.save(update_fields=['role'])
+        _ensure_role_profile(user)
+        request.session['needs_role_selection'] = False
+        messages.success(request, f'Role selected: {user.get_role_display()}')
+        return redirect('users:dashboard')
+
+    return render(request, 'users/choose_role.html', {'title': 'Choose Role - Rechiro'})
 
 
 def verify_email_view(request, token):
@@ -393,7 +445,7 @@ def email_verification_view(request):
         'users/email_verification.html',
         {
             'email_verify_link': verify_link,
-            'title': 'Email Verification - FishNet',
+            'title': 'Email Verification - Rechiro',
         }
     )
 
@@ -406,7 +458,7 @@ def phone_verification_view(request):
         'users/phone_verification.html',
         {
             'latest_txn': latest_txn,
-            'title': 'Phone Verification - FishNet',
+            'title': 'Phone Verification - Rechiro',
         }
     )
 
@@ -496,5 +548,5 @@ class UserProfileUpdateView(LoginRequiredMixin, UpdateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['title'] = 'Edit Profile - FishNet'
+        context['title'] = 'Edit Profile - Rechiro'
         return context

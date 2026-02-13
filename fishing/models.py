@@ -20,20 +20,14 @@ class Fish(models.Model):
     ]
     
     FISH_TYPE_CHOICES = [
-        ('tilapia', 'Tilapia'),
-        ('catfish', 'Catfish'),
-        ('sardine', 'Sardine'),
-        ('tuna', 'Tuna'),
-        ('salmon', 'Salmon'),
-        ('mackerel', 'Mackerel'),
-        ('cod', 'Cod'),
-        ('snapper', 'Snapper'),
-        ('prawns', 'Prawns'),
-        ('crab', 'Crab'),
-        ('lobster', 'Lobster'),
-        ('octopus', 'Octopus'),
-        ('squid', 'Squid'),
-        ('other', 'Other'),
+        ('tilapia', 'Tilapia (Ngege)'),
+        ('nile_perch', 'Nile Perch (Mbuta)'),
+        ('catfish', 'African Catfish (Semu)'),
+        ('omena', 'Dagaa / Omena'),
+        ('lungfish', 'Lungfish (Kamongo)'),
+        ('mudfish', 'Mudfish'),
+        ('barbel', 'Barbel'),
+        ('other', 'Other (Lake Victoria Species)'),
     ]
     
     fisherman = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='fish_listings')

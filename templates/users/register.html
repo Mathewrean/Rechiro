@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
 
-{% block title %}Register - FishNet{% endblock %}
+{% block title %}Register - Rechiro{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gradient-to-br from-blue-50 to-teal-50 py-12 px-4 sm:px-6 lg:px-8">
+<div class="min-h-screen bg-[#f5f7f8] py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-2xl w-full mx-auto space-y-8">
         <!-- Header -->
         <div class="text-center">
@@ -11,7 +11,7 @@
                 <i class="fas fa-user-plus text-white text-2xl"></i>
             </div>
             <h2 class="mt-6 text-3xl font-bold text-gray-900">
-                Join FishNet Marketplace
+                Join Rechiro Marketplace
             </h2>
             <p class="mt-2 text-sm text-gray-600">
                 Create your account to buy or sell fresh fish
@@ -31,7 +31,7 @@
         {% endif %}
 
         <!-- Registration Form -->
-        <div class="bg-white rounded-2xl shadow-xl p-8">
+        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-8">
             <form method="post" class="space-y-6 form-panel">
                 {% csrf_token %}
                 
@@ -132,7 +132,7 @@
                         </h3>
                     </div>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <!-- Fisherman Option -->
                         <div>
                             <input type="radio" id="role_fisherman" name="role" value="fisherman" class="peer sr-only" required {% if form.role.value == 'fisherman' %}checked{% endif %}>
@@ -160,6 +160,22 @@
                                         </div>
                                         <h4 class="font-bold text-gray-900">Customer</h4>
                                         <p class="text-sm text-gray-600 mt-1">Buy fresh fish from fishermen</p>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                        
+                        <!-- Delivery Agent Option -->
+                        <div>
+                            <input type="radio" id="role_delivery" name="role" value="delivery" class="peer sr-only" required {% if form.role.value == 'delivery' %}checked{% endif %}>
+                            <label for="role_delivery" class="block cursor-pointer">
+                                <div class="p-6 border-2 border-gray-200 rounded-xl hover:border-orange-400 transition-all duration-200 peer-checked:border-orange-500 peer-checked:bg-orange-50">
+                                    <div class="text-center">
+                                        <div class="mx-auto h-16 w-16 bg-orange-100 rounded-full flex items-center justify-center mb-3">
+                                            <i class="fas fa-truck text-orange-600 text-2xl"></i>
+                                        </div>
+                                        <h4 class="font-bold text-gray-900">Delivery Agent</h4>
+                                        <p class="text-sm text-gray-600 mt-1">Manage and deliver assigned orders</p>
                                     </div>
                                 </div>
                             </label>
@@ -258,7 +274,7 @@
                     </div>
                 {% endif %}
                 
-                <button type="submit" class="w-full bg-gradient-to-r from-blue-500 to-teal-500 text-white font-medium py-4 px-4 rounded-lg hover:from-blue-600 hover:to-teal-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105 shadow-lg">
+                <button type="submit" class="w-full bg-primary text-white font-medium py-3.5 px-4 rounded-lg hover:brightness-95 focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-200 shadow-md">
                     <i class="fas fa-user-plus mr-2"></i>
                     Create Account
                 </button>

@@ -184,6 +184,8 @@ SOCIALACCOUNT_PROVIDERS = {
         "AUTH_PARAMS": {"access_type": "online"},
     }
 }
+if ALLAUTH_INSTALLED:
+    SOCIALACCOUNT_ADAPTER = "users.adapters.RechiroSocialAccountAdapter"
 
  
 # M-Pesa Daraja API Configuration

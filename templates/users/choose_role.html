@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}Choose Role - Rechiro{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-[#f4f7f8] py-12 px-4">
+    <div class="max-w-4xl mx-auto">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">Choose Your Role</h1>
+            <p class="text-gray-600 mt-2">Select one role to continue. You can only set this once unless changed by admin.</p>
+        </div>
+
+        <form method="post" class="form-panel">
+            {% csrf_token %}
+            <div class="grid md:grid-cols-3 gap-6">
+                <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 text-center">
+                    <div class="w-14 h-14 rounded-full bg-teal-100 mx-auto flex items-center justify-center">
+                        <i class="fas fa-fish text-teal-700 text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mt-4">Fisherman</h3>
+                    <p class="text-sm text-gray-600 mt-2">List catches, manage stock, and fulfill orders.</p>
+                    <button type="submit" name="role" value="fisherman" class="mt-5 w-full bg-primary hover:opacity-90 text-white py-2.5 rounded-lg font-semibold">
+                        Select Fisherman
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 text-center">
+                    <div class="w-14 h-14 rounded-full bg-sky-100 mx-auto flex items-center justify-center">
+                        <i class="fas fa-shopping-basket text-sky-700 text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mt-4">Customer</h3>
+                    <p class="text-sm text-gray-600 mt-2">Browse fresh fish, place orders, and track delivery.</p>
+                    <button type="submit" name="role" value="customer" class="mt-5 w-full bg-primary hover:opacity-90 text-white py-2.5 rounded-lg font-semibold">
+                        Select Customer
+                    </button>
+                </div>
+
+                <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 text-center">
+                    <div class="w-14 h-14 rounded-full bg-amber-100 mx-auto flex items-center justify-center">
+                        <i class="fas fa-truck text-amber-700 text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mt-4">Delivery Agent</h3>
+                    <p class="text-sm text-gray-600 mt-2">Manage assigned deliveries and update delivery status.</p>
+                    <button type="submit" name="role" value="delivery" class="mt-5 w-full bg-primary hover:opacity-90 text-white py-2.5 rounded-lg font-semibold">
+                        Select Delivery
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

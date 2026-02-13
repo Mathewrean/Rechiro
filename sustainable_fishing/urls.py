@@ -9,6 +9,7 @@ from fishing.views import mpesa_callback
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', RedirectView.as_view(url='/fishing/home/', permanent=False), name='home'),
+    path('choose-role/', RedirectView.as_view(url='/users/choose-role/', permanent=False), name='choose_role_root'),
     path('users/', include('users.urls')),
     path('api/mpesa/callback/', mpesa_callback, name='api_mpesa_callback'),
     path('fishing/', include('fishing.urls')),

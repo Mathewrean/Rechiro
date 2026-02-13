@@ -1,4 +1,4 @@
-"""Context processors for the FishNet application"""
+"""Context processors for the Rechiro application"""
 
 from fishing.models import Cart
 
