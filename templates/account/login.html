@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load socialaccount %}
+
+{% block title %}Sign In - Rechiro{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-[#f5f7f8] py-10 px-4">
+    <div class="max-w-5xl mx-auto">
+        <div class="grid lg:grid-cols-2 bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+            <div class="hidden lg:flex flex-col justify-between p-10 bg-gradient-to-br from-[#0b5d66] via-[#0a4f58] to-[#2a9d8f] text-white">
+                <div>
+                    <div class="flex items-center gap-3">
+                        <div class="h-12 w-12 rounded-2xl bg-white/15 flex items-center justify-center">
+                            <i class="fas fa-fish text-2xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm uppercase tracking-[0.2em] text-white/80">Rechiro</p>
+                            <h2 class="text-2xl font-semibold">Digital Fish Marketplace</h2>
+                        </div>
+                    </div>
+                    <p class="mt-6 text-white/80 leading-relaxed">
+                        Secure access for fishermen, customers, and delivery agents.
+                    </p>
+                </div>
+                <div class="space-y-3 text-sm text-white/75">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Role-based dashboards and verified profiles</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Track listings, orders, and deliveries</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-8 md:p-10">
+                <div class="mb-6">
+                    <h1 class="text-3xl font-bold text-gray-900">Sign in</h1>
+                    <p class="text-gray-600 mt-2">
+                        {% trans "If you have not created an account yet, then please" %}
+                        <a href="{% url 'account_signup' %}" class="font-semibold text-primary hover:underline">{% trans "sign up" %}</a>.
+                    </p>
+                </div>
+
+                <form method="post" action="{% url 'account_login' %}" class="space-y-5 form-panel">
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                    <div class="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                        {{ form.non_field_errors.0 }}
+                    </div>
+                    {% endif %}
+
+                    <div>
+                        <label for="{{ form.login.id_for_label }}" class="block mb-2 text-sm font-semibold text-gray-700">
+                            {% trans "Login" %}
+                        </label>
+                        <input type="text"
+                               name="{{ form.login.name }}"
+                               id="{{ form.login.id_for_label }}"
+                               value="{{ form.login.value|default:'' }}"
+                               placeholder="{% trans 'Username or email' %}"
+                               autocomplete="email"
+                               required>
+                        {% if form.login.errors %}
+                        <p class="form-error">{{ form.login.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.password.id_for_label }}" class="block mb-2 text-sm font-semibold text-gray-700">
+                            {% trans "Password" %}
+                        </label>
+                        <input type="password"
+                               name="{{ form.password.name }}"
+                               id="{{ form.password.id_for_label }}"
+                               placeholder="{% trans 'Password' %}"
+                               autocomplete="current-password"
+                               required>
+                        {% if form.password.errors %}
+                        <p class="form-error">{{ form.password.errors.0 }}</p>
+                        {% endif %}
+                        <div class="mt-2 text-sm">
+                            <a href="{% url 'account_reset_password' %}" class="text-primary hover:underline">
+                                {% trans "Forgot your password?" %}
+                            </a>
+                        </div>
+                    </div>
+
+                    {% if form.remember %}
+                    <label class="inline-flex items-center text-sm text-gray-600">
+                        {{ form.remember }}
+                        <span class="ml-2">{% trans "Remember Me" %}</span>
+                    </label>
+                    {% endif %}
+
+                    {% if redirect_field_value %}
+                    <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
+                    {% endif %}
+
+                    <button type="submit" class="w-full bg-primary hover:brightness-95 text-white font-semibold py-3 rounded-lg transition-colors">
+                        {% trans "Sign In" %}
+                    </button>
+                </form>
+
+                <div class="my-6 flex items-center">
+                    <div class="flex-1 border-t border-gray-200"></div>
+                    <span class="px-3 text-xs text-gray-500 uppercase">{% trans "or" %}</span>
+                    <div class="flex-1 border-t border-gray-200"></div>
+                </div>
+
+                <a href="{% provider_login_url 'google' process='login' %}" class="w-full inline-flex justify-center items-center border border-gray-300 text-gray-700 font-semibold py-3 px-4 rounded-lg hover:bg-gray-50 transition-colors">
+                    <i class="fab fa-google mr-2"></i>
+                    {% trans "Continue with Google" %}
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

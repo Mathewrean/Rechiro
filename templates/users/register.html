@@ -3,316 +3,306 @@
 {% block title %}Register - Rechiro{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-[#f5f7f8] py-12 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-2xl w-full mx-auto space-y-8">
-        <!-- Header -->
-        <div class="text-center">
-            <div class="mx-auto h-16 w-16 bg-gradient-to-r from-blue-500 to-teal-500 rounded-full flex items-center justify-center shadow-lg">
-                <i class="fas fa-user-plus text-white text-2xl"></i>
+<div class="min-h-screen bg-[#f5f7f8] py-10 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-6xl w-full mx-auto">
+        <div class="grid lg:grid-cols-[1.1fr_2fr] gap-8">
+            <div class="rounded-2xl bg-gradient-to-br from-[#0b5d66] via-[#0a4f58] to-[#2a9d8f] text-white p-8 lg:p-10 shadow-xl">
+                <div class="flex items-center gap-3">
+                    <div class="h-12 w-12 rounded-2xl bg-white/15 flex items-center justify-center">
+                        <i class="fas fa-user-plus text-2xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs uppercase tracking-[0.25em] text-white/80">Rechiro</p>
+                        <h2 class="text-2xl font-semibold">Create your account</h2>
+                    </div>
+                </div>
+                <p class="mt-6 text-white/80 leading-relaxed">
+                    Start buying or selling fresh fish with role-specific tools and delivery updates.
+                </p>
+                <div class="mt-8 space-y-3 text-sm text-white/75">
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Verified profiles and secure marketplace access</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Dashboard tailored to your role</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Track listings, orders, and deliveries in one place</span>
+                    </div>
+                </div>
             </div>
-            <h2 class="mt-6 text-3xl font-bold text-gray-900">
-                Join Rechiro Marketplace
-            </h2>
-            <p class="mt-2 text-sm text-gray-600">
-                Create your account to buy or sell fresh fish
-            </p>
-        </div>
 
-        <!-- Success Message -->
-        {% if messages %}
-        <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-4 rounded-r-lg">
-            {% for message in messages %}
-            <div class="flex items-center">
-                <i class="fas fa-check-circle mr-2"></i>
-                <span>{{ message }}</span>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-
-        <!-- Registration Form -->
-        <div class="bg-white rounded-xl shadow-lg border border-gray-200 p-8">
-            <form method="post" class="space-y-6 form-panel">
-                {% csrf_token %}
-                
-                <!-- Basic Info Section -->
-                <div class="space-y-6">
-                    <div class="border-b border-gray-200 pb-4">
-                        <h3 class="text-lg font-medium text-gray-900 flex items-center">
-                            <i class="fas fa-user text-blue-600 mr-2"></i>
-                            Account Information
-                        </h3>
+            <div class="space-y-6">
+                {% if messages %}
+                <div class="bg-green-100 border border-green-200 text-green-700 p-4 rounded-xl">
+                    {% for message in messages %}
+                    <div class="flex items-center">
+                        <i class="fas fa-check-circle mr-2"></i>
+                        <span>{{ message }}</span>
                     </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                                <i class="fas fa-at text-blue-600 mr-2"></i>Username *
-                            </label>
-                            <input type="text" 
-                                   name="{{ form.username.name }}" 
-                                   id="{{ form.username.id_for_label }}"
-                                   value="{{ form.username.value|default:'' }}"
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
-                                   placeholder="Choose a username"
-                                   required>
-                            {% if form.username.errors %}
-                                <div class="mt-1 text-sm text-red-600">
-                                    <i class="fas fa-exclamation-circle mr-1"></i>
-                                    {{ form.username.errors.0 }}
-                                </div>
-                            {% endif %}
-                        </div>
-                        
-                        <div>
-                            <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                                <i class="fas fa-envelope text-blue-600 mr-2"></i>Email Address *
-                            </label>
-                            <input type="email" 
-                                   name="{{ form.email.name }}" 
-                                   id="{{ form.email.id_for_label }}"
-                                   value="{{ form.email.value|default:'' }}"
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
-                                   placeholder="your@email.com"
-                                   required>
-                            {% if form.email.errors %}
-                                <div class="mt-1 text-sm text-red-600">
-                                    <i class="fas fa-exclamation-circle mr-1"></i>
-                                    {{ form.email.errors.0 }}
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <div>
-                        <label for="{{ form.full_name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                            <i class="fas fa-id-card text-blue-600 mr-2"></i>Full Name *
-                        </label>
-                        <input type="text" 
-                               name="{{ form.full_name.name }}" 
-                               id="{{ form.full_name.id_for_label }}"
-                               value="{{ form.full_name.value|default:'' }}"
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
-                               placeholder="Enter your full name"
-                               required>
-                        {% if form.full_name.errors %}
-                            <div class="mt-1 text-sm text-red-600">
-                                <i class="fas fa-exclamation-circle mr-1"></i>
-                                {{ form.full_name.errors.0 }}
-                            </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div>
-                        <label for="{{ form.phone.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                            <i class="fas fa-phone text-blue-600 mr-2"></i>Phone Number *
-                        </label>
-                        <input type="tel" 
-                               name="{{ form.phone.name }}" 
-                               id="{{ form.phone.id_for_label }}"
-                               value="{{ form.phone.value|default:'' }}"
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
-                               placeholder="e.g., 254712345678"
-                               required>
-                        {% if form.phone.errors %}
-                            <div class="mt-1 text-sm text-red-600">
-                                <i class="fas fa-exclamation-circle mr-1"></i>
-                                {{ form.phone.errors.0 }}
-                            </div>
-                        {% endif %}
-                    </div>
+                    {% endfor %}
                 </div>
+                {% endif %}
 
-                <!-- Role Selection Section -->
-                <div class="space-y-6">
-                    <div class="border-b border-gray-200 pb-4">
-                        <h3 class="text-lg font-medium text-gray-900 flex items-center">
-                            <i class="fas fa-briefcase text-teal-500 mr-2"></i>
-                            Select Your Role
-                        </h3>
+                <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 lg:p-10">
+                    <div class="mb-6">
+                        <h1 class="text-3xl font-bold text-gray-900">Join Rechiro Marketplace</h1>
+                        <p class="text-sm text-gray-600 mt-2">Create your account to buy or sell fresh fish.</p>
                     </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <!-- Fisherman Option -->
-                        <div>
-                            <input type="radio" id="role_fisherman" name="role" value="fisherman" class="peer sr-only" required {% if form.role.value == 'fisherman' %}checked{% endif %}>
-                            <label for="role_fisherman" class="block cursor-pointer">
-                                <div class="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-400 transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-blue-50">
-                                    <div class="text-center">
-                                        <div class="mx-auto h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center mb-3">
-                                            <i class="fas fa-fish text-blue-600 text-2xl"></i>
-                                        </div>
-                                        <h4 class="font-bold text-gray-900">Fisherman</h4>
-                                        <p class="text-sm text-gray-600 mt-1">Sell fresh fish directly to customers</p>
-                                    </div>
-                                </div>
-                            </label>
-                        </div>
-                        
-                        <!-- Customer Option -->
-                        <div>
-                            <input type="radio" id="role_customer" name="role" value="customer" class="peer sr-only" required {% if form.role.value == 'customer' %}checked{% endif %}>
-                            <label for="role_customer" class="block cursor-pointer">
-                                <div class="p-6 border-2 border-gray-200 rounded-xl hover:border-teal-400 transition-all duration-200 peer-checked:border-teal-500 peer-checked:bg-teal-50">
-                                    <div class="text-center">
-                                        <div class="mx-auto h-16 w-16 bg-teal-100 rounded-full flex items-center justify-center mb-3">
-                                            <i class="fas fa-shopping-cart text-teal-600 text-2xl"></i>
-                                        </div>
-                                        <h4 class="font-bold text-gray-900">Customer</h4>
-                                        <p class="text-sm text-gray-600 mt-1">Buy fresh fish from fishermen</p>
-                                    </div>
-                                </div>
-                            </label>
-                        </div>
-                        
-                        <!-- Delivery Agent Option -->
-                        <div>
-                            <input type="radio" id="role_delivery" name="role" value="delivery" class="peer sr-only" required {% if form.role.value == 'delivery' %}checked{% endif %}>
-                            <label for="role_delivery" class="block cursor-pointer">
-                                <div class="p-6 border-2 border-gray-200 rounded-xl hover:border-orange-400 transition-all duration-200 peer-checked:border-orange-500 peer-checked:bg-orange-50">
-                                    <div class="text-center">
-                                        <div class="mx-auto h-16 w-16 bg-orange-100 rounded-full flex items-center justify-center mb-3">
-                                            <i class="fas fa-truck text-orange-600 text-2xl"></i>
-                                        </div>
-                                        <h4 class="font-bold text-gray-900">Delivery Agent</h4>
-                                        <p class="text-sm text-gray-600 mt-1">Manage and deliver assigned orders</p>
-                                    </div>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-                    {% if form.role.errors %}
-                        <div class="text-sm text-red-600 text-center">
-                            <i class="fas fa-exclamation-circle mr-1"></i>
-                            {{ form.role.errors.0 }}
-                        </div>
-                    {% endif %}
-                </div>
 
-                <!-- Location Section -->
-                <div class="space-y-6">
-                    <div class="border-b border-gray-200 pb-4">
-                        <h3 class="text-lg font-medium text-gray-900 flex items-center">
-                            <i class="fas fa-map-marker-alt text-orange-500 mr-2"></i>
-                            Location
-                        </h3>
-                    </div>
-                    
-                    <div>
-                        <label for="{{ form.location.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                            <i class="fas fa-map-pin text-gray-500 mr-2"></i>Your Location
-                        </label>
-                        <input type="text" 
-                               name="{{ form.location.name }}" 
-                               id="{{ form.location.id_for_label }}"
-                               value="{{ form.location.value|default:'' }}"
-                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
-                               placeholder="e.g., Mombasa, Kenya">
-                        {% if form.location.errors %}
-                            <div class="mt-1 text-sm text-red-600">
-                                <i class="fas fa-exclamation-circle mr-1"></i>
-                                {{ form.location.errors.0 }}
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
+                    <form method="post" class="space-y-6 form-panel">
+                        {% csrf_token %}
 
-                <!-- Password Section -->
-                <div class="space-y-6">
-                    <div class="border-b border-gray-200 pb-4">
-                        <h3 class="text-lg font-medium text-gray-900 flex items-center">
-                            <i class="fas fa-lock text-gray-600 mr-2"></i>
-                            Security
-                        </h3>
-                    </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label for="{{ form.password1.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                                <i class="fas fa-key text-gray-500 mr-2"></i>Password *
-                            </label>
-                            <input type="password" 
-                                   name="{{ form.password1.name }}" 
-                                   id="{{ form.password1.id_for_label }}"
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
-                                   placeholder="Choose a strong password"
-                                   required>
-                            {% if form.password1.errors %}
-                                <div class="mt-1 text-sm text-red-600">
-                                    <i class="fas fa-exclamation-circle mr-1"></i>
-                                    {{ form.password1.errors.0 }}
-                                </div>
-                            {% endif %}
-                        </div>
-                        
-                        <div>
-                            <label for="{{ form.password2.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
-                                <i class="fas fa-check-circle text-gray-500 mr-2"></i>Confirm Password *
-                            </label>
-                            <input type="password" 
-                                   name="{{ form.password2.name }}" 
-                                   id="{{ form.password2.id_for_label }}"
-                                   class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
-                                   placeholder="Confirm your password"
-                                   required>
-                            {% if form.password2.errors %}
-                                <div class="mt-1 text-sm text-red-600">
-                                    <i class="fas fa-exclamation-circle mr-1"></i>
-                                    {{ form.password2.errors.0 }}
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-
-                {% if form.non_field_errors %}
-                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
-                        <div class="text-sm text-red-700">
-                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                        {% if form.non_field_errors %}
+                        <div class="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                             {{ form.non_field_errors.0 }}
                         </div>
-                    </div>
-                {% endif %}
-                
-                <button type="submit" class="w-full bg-primary text-white font-medium py-3.5 px-4 rounded-lg hover:brightness-95 focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-200 shadow-md">
-                    <i class="fas fa-user-plus mr-2"></i>
-                    Create Account
-                </button>
-            </form>
-            
-            <div class="mt-8 text-center">
-                <p class="text-sm text-gray-600">
-                    Already have an account? 
-                    <a href="{% url 'users:login' %}" class="font-medium text-blue-600 hover:text-blue-700 transition-colors duration-200">
-                        Sign in here
-                    </a>
-                </p>
-            </div>
-        </div>
+                        {% endif %}
 
-        <!-- Benefits -->
-        <div class="bg-white/50 backdrop-blur-sm rounded-xl p-6">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
-                <div class="flex flex-col items-center">
-                    <div class="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center mb-3">
-                        <i class="fas fa-fish text-blue-600 text-xl"></i>
-                    </div>
-                    <h4 class="font-medium text-gray-900">Fresh Fish</h4>
-                    <p class="text-sm text-gray-600 mt-1">Direct from fishermen</p>
-                </div>
-                <div class="flex flex-col items-center">
-                    <div class="h-12 w-12 bg-teal-100 rounded-full flex items-center justify-center mb-3">
-                        <i class="fas fa-money-bill-wave text-teal-600 text-xl"></i>
-                    </div>
-                    <h4 class="font-medium text-gray-900">M-Pesa Payments</h4>
-                    <p class="text-sm text-gray-600 mt-1">Secure & convenient</p>
-                </div>
-                <div class="flex flex-col items-center">
-                    <div class="h-12 w-12 bg-green-100 rounded-full flex items-center justify-center mb-3">
-                        <i class="fas fa-truck text-green-600 text-xl"></i>
-                    </div>
-                    <h4 class="font-medium text-gray-900">Delivery</h4>
-                    <p class="text-sm text-gray-600 mt-1">Door delivery or pickup</p>
+                        <div class="space-y-6">
+                            <div class="border-b border-gray-200 pb-4">
+                                <h3 class="text-lg font-medium text-gray-900 flex items-center">
+                                    <i class="fas fa-user text-blue-600 mr-2"></i>
+                                    Account Information
+                                </h3>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                        <i class="fas fa-at text-blue-600 mr-2"></i>Username *
+                                    </label>
+                                    <input type="text" 
+                                           name="{{ form.username.name }}" 
+                                           id="{{ form.username.id_for_label }}"
+                                           value="{{ form.username.value|default:'' }}"
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                                           placeholder="Choose a username"
+                                           required>
+                                    {% if form.username.errors %}
+                                        <div class="mt-1 text-sm text-red-600">
+                                            <i class="fas fa-exclamation-circle mr-1"></i>
+                                            {{ form.username.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <div>
+                                    <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                        <i class="fas fa-envelope text-blue-600 mr-2"></i>Email Address *
+                                    </label>
+                                    <input type="email" 
+                                           name="{{ form.email.name }}" 
+                                           id="{{ form.email.id_for_label }}"
+                                           value="{{ form.email.value|default:'' }}"
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                                           placeholder="your@email.com"
+                                           required>
+                                    {% if form.email.errors %}
+                                        <div class="mt-1 text-sm text-red-600">
+                                            <i class="fas fa-exclamation-circle mr-1"></i>
+                                            {{ form.email.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label for="{{ form.full_name.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-id-card text-blue-600 mr-2"></i>Full Name *
+                                </label>
+                                <input type="text" 
+                                       name="{{ form.full_name.name }}" 
+                                       id="{{ form.full_name.id_for_label }}"
+                                       value="{{ form.full_name.value|default:'' }}"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                                       placeholder="Enter your full name"
+                                       required>
+                                {% if form.full_name.errors %}
+                                    <div class="mt-1 text-sm text-red-600">
+                                        <i class="fas fa-exclamation-circle mr-1"></i>
+                                        {{ form.full_name.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div>
+                                <label for="{{ form.phone.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-phone text-blue-600 mr-2"></i>Phone Number *
+                                </label>
+                                <input type="tel" 
+                                       name="{{ form.phone.name }}" 
+                                       id="{{ form.phone.id_for_label }}"
+                                       value="{{ form.phone.value|default:'' }}"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                                       placeholder="e.g., 254712345678"
+                                       required>
+                                {% if form.phone.errors %}
+                                    <div class="mt-1 text-sm text-red-600">
+                                        <i class="fas fa-exclamation-circle mr-1"></i>
+                                        {{ form.phone.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <p class="text-xs text-gray-500 mt-2">Use your active mobile number for delivery updates and verification.</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-6">
+                            <div class="border-b border-gray-200 pb-4">
+                                <h3 class="text-lg font-medium text-gray-900 flex items-center">
+                                    <i class="fas fa-briefcase text-teal-500 mr-2"></i>
+                                    Select Your Role
+                                </h3>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <input type="radio" id="role_fisherman" name="role" value="fisherman" class="peer sr-only" required {% if form.role.value == 'fisherman' %}checked{% endif %}>
+                                    <label for="role_fisherman" class="block cursor-pointer">
+                                        <div class="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-400 transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-blue-50">
+                                            <div class="text-center">
+                                                <div class="mx-auto h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center mb-3">
+                                                    <i class="fas fa-fish text-blue-600 text-2xl"></i>
+                                                </div>
+                                                <h4 class="font-bold text-gray-900">Fisherman</h4>
+                                                <p class="text-sm text-gray-600 mt-1">Sell fresh fish directly to customers</p>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <div>
+                                    <input type="radio" id="role_customer" name="role" value="customer" class="peer sr-only" required {% if form.role.value == 'customer' %}checked{% endif %}>
+                                    <label for="role_customer" class="block cursor-pointer">
+                                        <div class="p-6 border-2 border-gray-200 rounded-xl hover:border-teal-400 transition-all duration-200 peer-checked:border-teal-500 peer-checked:bg-teal-50">
+                                            <div class="text-center">
+                                                <div class="mx-auto h-16 w-16 bg-teal-100 rounded-full flex items-center justify-center mb-3">
+                                                    <i class="fas fa-shopping-cart text-teal-600 text-2xl"></i>
+                                                </div>
+                                                <h4 class="font-bold text-gray-900">Customer</h4>
+                                                <p class="text-sm text-gray-600 mt-1">Buy fresh fish from fishermen</p>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+
+                                <div>
+                                    <input type="radio" id="role_delivery" name="role" value="delivery" class="peer sr-only" required {% if form.role.value == 'delivery' %}checked{% endif %}>
+                                    <label for="role_delivery" class="block cursor-pointer">
+                                        <div class="p-6 border-2 border-gray-200 rounded-xl hover:border-orange-400 transition-all duration-200 peer-checked:border-orange-500 peer-checked:bg-orange-50">
+                                            <div class="text-center">
+                                                <div class="mx-auto h-16 w-16 bg-orange-100 rounded-full flex items-center justify-center mb-3">
+                                                    <i class="fas fa-truck text-orange-600 text-2xl"></i>
+                                                </div>
+                                                <h4 class="font-bold text-gray-900">Delivery Agent</h4>
+                                                <p class="text-sm text-gray-600 mt-1">Manage and deliver assigned orders</p>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                            {% if form.role.errors %}
+                                <div class="text-sm text-red-600 text-center">
+                                    <i class="fas fa-exclamation-circle mr-1"></i>
+                                    {{ form.role.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="space-y-6">
+                            <div class="border-b border-gray-200 pb-4">
+                                <h3 class="text-lg font-medium text-gray-900 flex items-center">
+                                    <i class="fas fa-map-marker-alt text-orange-500 mr-2"></i>
+                                    Location
+                                </h3>
+                            </div>
+
+                            <div>
+                                <label for="{{ form.location.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-map-pin text-gray-500 mr-2"></i>Your Location
+                                </label>
+                                <input type="text" 
+                                       name="{{ form.location.name }}" 
+                                       id="{{ form.location.id_for_label }}"
+                                       value="{{ form.location.value|default:'' }}"
+                                       class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                                       placeholder="e.g., Mombasa, Kenya">
+                                {% if form.location.errors %}
+                                    <div class="mt-1 text-sm text-red-600">
+                                        <i class="fas fa-exclamation-circle mr-1"></i>
+                                        {{ form.location.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="space-y-6">
+                            <div class="border-b border-gray-200 pb-4">
+                                <h3 class="text-lg font-medium text-gray-900 flex items-center">
+                                    <i class="fas fa-lock text-gray-600 mr-2"></i>
+                                    Security
+                                </h3>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label for="{{ form.password1.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                        <i class="fas fa-key text-gray-500 mr-2"></i>Password *
+                                    </label>
+                                    <input type="password" 
+                                           name="{{ form.password1.name }}" 
+                                           id="{{ form.password1.id_for_label }}"
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                                           placeholder="Choose a strong password"
+                                           required>
+                                    {% if form.password1.errors %}
+                                        <div class="mt-1 text-sm text-red-600">
+                                            <i class="fas fa-exclamation-circle mr-1"></i>
+                                            {{ form.password1.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                    <p class="text-xs text-gray-500 mt-2">Use at least 8 characters with a mix of letters and numbers.</p>
+                                </div>
+
+                                <div>
+                                    <label for="{{ form.password2.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                                        <i class="fas fa-check-circle text-gray-500 mr-2"></i>Confirm Password *
+                                    </label>
+                                    <input type="password" 
+                                           name="{{ form.password2.name }}" 
+                                           id="{{ form.password2.id_for_label }}"
+                                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 placeholder-gray-400"
+                                           placeholder="Confirm your password"
+                                           required>
+                                    {% if form.password2.errors %}
+                                        <div class="mt-1 text-sm text-red-600">
+                                            <i class="fas fa-exclamation-circle mr-1"></i>
+                                            {{ form.password2.errors.0 }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-4">
+                            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200 shadow-lg">
+                                <i class="fas fa-user-plus mr-2"></i>
+                                Create Account
+                            </button>
+                        </div>
+
+                        <div class="text-center pt-4 border-t border-gray-200">
+                            <p class="text-sm text-gray-600">
+                                Already have an account? 
+                                <a href="{% url 'users:login' %}" class="text-blue-600 hover:text-blue-700 font-semibold">
+                                    Sign in here
+                                </a>
+                            </p>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>

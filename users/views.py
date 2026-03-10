@@ -16,6 +16,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.views.generic import UpdateView, DetailView, ListView
 from decimal import Decimal
+import importlib.util
 
 from .models import User, FishermanProfile, CustomerProfile, BeachChairmanProfile, PhoneVerificationTransaction
 from .forms import (
@@ -66,6 +67,18 @@ def _send_email_verification_link(request, user):
         fail_silently=True,
     )
     return verify_link
+
+
+def _get_content_models():
+    if "content" not in settings.INSTALLED_APPS:
+        return None
+    if importlib.util.find_spec("content") is None:
+        return None
+    try:
+        from content.models import TimelinePost, EducationalContent
+    except Exception:
+        return None
+    return TimelinePost, EducationalContent
 
 
 def _initiate_phone_verification_stk(user):
@@ -138,6 +151,16 @@ def register_view(request):
 
 def login_view(request):
     """Handle user login"""
+    google_oauth_enabled = False
+    if getattr(settings, 'ALLAUTH_INSTALLED', False):
+        if getattr(settings, 'GOOGLE_CLIENT_ID', '') and getattr(settings, 'GOOGLE_CLIENT_SECRET', ''):
+            google_oauth_enabled = True
+        else:
+            try:
+                from allauth.socialaccount.models import SocialApp
+                google_oauth_enabled = SocialApp.objects.filter(provider='google').exists()
+            except Exception:
+                google_oauth_enabled = False
     if request.user.is_authenticated:
         return redirect('users:profile')
     
@@ -165,7 +188,8 @@ def login_view(request):
     
     context = {
         'form': form,
-        'title': 'Login - Rechiro'
+        'title': 'Login - Rechiro',
+        'google_oauth_enabled': google_oauth_enabled,
     }
     return render(request, 'users/login.html', context)
 
@@ -182,6 +206,17 @@ def logout_view(request):
 def profile_view(request):
     """Display user profile"""
     user = request.user
+    content_models = _get_content_models()
+    total_posts = None
+    total_educational = None
+    recent_posts = None
+    educational_content = None
+    if content_models:
+        TimelinePost, EducationalContent = content_models
+        total_posts = TimelinePost.objects.filter(author=user).count()
+        total_educational = EducationalContent.objects.filter(author=user).count()
+        recent_posts = TimelinePost.objects.filter(author=user).order_by('-created_at')[:5]
+        educational_content = EducationalContent.objects.filter(author=user).order_by('-created_at')[:5]
     
     email_verify_link = ''
     if not user.email_verified and settings.DEBUG and user.email:
@@ -191,6 +226,8 @@ def profile_view(request):
         # Get fisherman stats
         profile = user.get_fisherman_profile()
         fish_listings = Fish.objects.filter(fisherman=user)
+        recent_catches = fish_listings.order_by('-created_at')[:5]
+        total_catches = fish_listings.count()
         total_sales = sum(item.total_price for item in user.sold_items.all() if item.order.status in ['PAID', 'DELIVERED'])
         context = {
             'user': user,
@@ -198,6 +235,12 @@ def profile_view(request):
             'fish_listings': fish_listings[:5],
             'total_listings': fish_listings.count(),
             'total_sales': total_sales,
+            'total_catches': total_catches,
+            'recent_catches': recent_catches,
+            'total_posts': total_posts,
+            'recent_posts': recent_posts,
+            'total_educational': total_educational,
+            'educational_content': educational_content,
             'email_verify_link': email_verify_link,
             'title': f'{user.full_name or user.username} - Profile'
         }
@@ -213,6 +256,12 @@ def profile_view(request):
             'orders': orders[:5],
             'total_orders': total_orders,
             'completed_orders': completed_orders,
+            'total_catches': None,
+            'recent_catches': None,
+            'total_posts': total_posts,
+            'recent_posts': recent_posts,
+            'total_educational': total_educational,
+            'educational_content': educational_content,
             'email_verify_link': email_verify_link,
             'title': f'{user.full_name or user.username} - Profile'
         }
@@ -392,7 +441,37 @@ def choose_role_view(request):
         user.role = selected_role
         user.save(update_fields=['role'])
         _ensure_role_profile(user)
+        needs_role_selection = request.session.get('needs_role_selection')
         request.session['needs_role_selection'] = False
+
+        if needs_role_selection:
+            if user.email and not user.email_verified:
+                try:
+                    verify_link = _send_email_verification_link(request, user)
+                    if settings.DEBUG:
+                        messages.info(request, f'Email verification link (dev): {verify_link}')
+                    messages.success(request, 'Verification email sent. Check your inbox.')
+                except Exception:
+                    messages.error(request, 'Failed to send verification email. Try again.')
+
+            if selected_role == 'fisherman':
+                if user.phone:
+                    stk_result = _initiate_phone_verification_stk(user)
+                    if stk_result.get('success'):
+                        messages.info(
+                            request,
+                            'Complete the KES 1 phone verification STK push to activate seller listing access.'
+                        )
+                    else:
+                        messages.warning(
+                            request,
+                            f"Phone verification STK failed: {stk_result.get('error', 'Unknown error')}"
+                        )
+                else:
+                    messages.warning(
+                        request,
+                        'Add a phone number in your profile to complete fisherman phone verification.'
+                    )
         messages.success(request, f'Role selected: {user.get_role_display()}')
         return redirect('users:dashboard')
 

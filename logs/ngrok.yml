@@ -1,0 +1,11 @@
+version: "2"
+authtoken: ""
+web_addr: "127.0.0.1:4040"
+
+tunnels:
+  http:
+    addr: "8000"
+    proto: "http"
+    host_header: "rewrite"
+    domain: "albert-incult-superfluously.ngrok-free.dev"
+

@@ -88,7 +88,9 @@
         <!-- Main Content -->
         <div class="lg:col-span-3">
             <!-- Activity Overview Cards -->
+            {% if total_catches is not None or total_posts is not None or total_educational is not None %}
             <div class="grid md:grid-cols-3 gap-6 mb-8">
+                {% if total_catches is not None %}
                 <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl p-6 shadow-lg transform hover:scale-105 transition-all duration-300">
                     <div class="flex items-center justify-between">
                         <div>
@@ -100,7 +102,9 @@
                         </div>
                     </div>
                 </div>
+                {% endif %}
                 
+                {% if total_posts is not None %}
                 <div class="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-2xl p-6 shadow-lg transform hover:scale-105 transition-all duration-300">
                     <div class="flex items-center justify-between">
                         <div>
@@ -112,7 +116,9 @@
                         </div>
                     </div>
                 </div>
+                {% endif %}
                 
+                {% if total_educational is not None %}
                 <div class="bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-2xl p-6 shadow-lg transform hover:scale-105 transition-all duration-300">
                     <div class="flex items-center justify-between">
                         <div>
@@ -124,7 +130,9 @@
                         </div>
                     </div>
                 </div>
+                {% endif %}
             </div>
+            {% endif %}
             
             <!-- Recent Activity -->
             <div class="bg-white rounded-2xl shadow-lg p-6">
@@ -142,7 +150,7 @@
                             <div class="space-y-4">
                                 {% for catch in recent_catches %}
                                     <div class="border-l-4 border-blue-500 pl-4 py-2">
-                                        <h6 class="font-medium text-gray-800">{{ catch.fish_type }} - {{ catch.weight }}kg</h6>
+                                        <h6 class="font-medium text-gray-800">{{ catch.fish_type }} - {{ catch.available_weight }}kg</h6>
                                         <p class="text-sm text-gray-600">{{ catch.location }} • {{ catch.catch_date }}</p>
                                     </div>
                                 {% endfor %}
@@ -196,28 +204,36 @@
             </div>
 
             <!-- Achievement Section -->
+            {% if total_catches is not None or total_posts is not None or total_educational is not None %}
             <div class="mt-8 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-2xl p-6 shadow-lg">
                 <h5 class="text-xl font-semibold mb-4">
                     <i class="fas fa-trophy mr-2"></i>Your Achievements
                 </h5>
                 <div class="grid md:grid-cols-3 gap-4">
+                    {% if total_catches is not None %}
                     <div class="bg-white/20 rounded-lg p-4 text-center">
                         <i class="fas fa-fish text-2xl mb-2"></i>
                         <h6 class="font-medium">Angler</h6>
                         <p class="text-sm opacity-90">{{ total_catches }} catches logged</p>
                     </div>
+                    {% endif %}
+                    {% if total_posts is not None %}
                     <div class="bg-white/20 rounded-lg p-4 text-center">
                         <i class="fas fa-share-alt text-2xl mb-2"></i>
                         <h6 class="font-medium">Contributor</h6>
                         <p class="text-sm opacity-90">{{ total_posts }} posts shared</p>
                     </div>
+                    {% endif %}
+                    {% if total_educational is not None %}
                     <div class="bg-white/20 rounded-lg p-4 text-center">
                         <i class="fas fa-graduation-cap text-2xl mb-2"></i>
                         <h6 class="font-medium">Educator</h6>
                         <p class="text-sm opacity-90">{{ total_educational }} content created</p>
                     </div>
+                    {% endif %}
                 </div>
             </div>
+            {% endif %}
         </div>
     </div>
 </div>

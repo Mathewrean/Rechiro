@@ -18,7 +18,7 @@ from .models import (
     PickupPoint, DeliveryAuditLog, SellerNotification, PlatformFeeLog, ChairmanApprovalRequest,
     UserNotification
 )
-from .mpesa_service import initiate_stk_push, process_payment_callback
+from .mpesa_service import MpesaService, initiate_stk_push, process_payment_callback
 from users.models import FishermanProfile, CustomerProfile, User
 from users.models import PhoneVerificationTransaction, BeachChairmanProfile
 from collections import defaultdict
@@ -448,18 +448,13 @@ def checkout_process(request):
         payment_errors = []
         for order_item in order.items.select_related('fisherman', 'fish'):
             fisher_profile = fishermen_profiles.get(order_item.fisherman_id)
-            payment_type = fisher_profile.mpesa_payment_type or 'STK_PUSH'
-            if payment_type in ['STK_PUSH', 'PAYBILL']:
-                transaction_type = 'CustomerPayBillOnline'
-            else:
-                transaction_type = 'CustomerBuyGoodsOnline'
             payment_result = initiate_stk_push(
                 phone_number=request.user.phone,
                 amount=float(order_item.total_price),
                 order_number=order.order_number,
-                business_shortcode=(fisher_profile.mpesa_paybill_number or fisher_profile.mpesa_till_number or None),
-                account_reference=(fisher_profile.mpesa_account_reference or f"{order.order_number}-{order_item.id}"),
-                transaction_type=transaction_type,
+                business_shortcode=None,
+                account_reference=f"{order.order_number}-{order_item.id}",
+                transaction_type='CustomerPayBillOnline',
             )
             if payment_result.get('success'):
                 PaymentTransaction.objects.create(
@@ -597,12 +592,18 @@ def mpesa_callback(request):
                         return JsonResponse({'status': 'error', 'message': 'Callback amount validation failed'}, status=400)
 
                 receipt_number = result.get('transaction_id', '') or ''
+                platform_fee = (payment_txn.amount * Decimal('0.02')).quantize(Decimal('0.01'))
+                net_payout = (payment_txn.amount - platform_fee).quantize(Decimal('0.01'))
+                if payment_txn.platform_fee != platform_fee or payment_txn.net_payout != net_payout:
+                    payment_txn.platform_fee = platform_fee
+                    payment_txn.net_payout = net_payout
                 payment_txn.mpesa_receipt_number = receipt_number
                 payment_txn.result_code = normalized_result_code
                 payment_txn.result_desc = result.get('result_desc', '')
                 payment_txn.status = 'COMPLETED'
                 payment_txn.save(update_fields=[
-                    'mpesa_receipt_number', 'result_code', 'result_desc', 'status', 'updated_at'
+                    'mpesa_receipt_number', 'result_code', 'result_desc', 'status',
+                    'platform_fee', 'net_payout', 'updated_at'
                 ])
 
                 if payment_txn.order_item and payment_txn.order_item.fulfillment_status != 'PAID':
@@ -650,6 +651,52 @@ def mpesa_callback(request):
                             'net_amount': payment_txn.net_payout,
                         }
                     )
+
+                if payment_txn.b2c_status not in ['SUCCESS', 'PENDING']:
+                    payout_phone = None
+                    try:
+                        fisher_profile = payment_txn.fisherman.fisherman_profile
+                        payout_phone = fisher_profile.mpesa_phone or fisher_profile.phone or payment_txn.fisherman.phone
+                    except FishermanProfile.DoesNotExist:
+                        payout_phone = payment_txn.fisherman.phone
+
+                    if payout_phone:
+                        if payout_phone.startswith('0'):
+                            payout_phone = '254' + payout_phone[1:]
+                        elif not payout_phone.startswith('254'):
+                            payout_phone = '254' + payout_phone
+
+                    payout_amount = payment_txn.net_payout
+                    if payout_amount and payout_amount > 0 and payout_phone:
+                        b2c_result = MpesaService().b2c_payment(
+                            phone_number=payout_phone,
+                            amount=payout_amount,
+                            remarks=f"Payout for Order #{order.order_number}"
+                        )
+                        if b2c_result.get('success'):
+                            payment_txn.b2c_status = 'SUCCESS'
+                            payment_txn.b2c_conversation_id = b2c_result.get('conversation_id', '')
+                            payment_txn.b2c_originator_conversation_id = b2c_result.get('originator_conversation_id', '')
+                            payment_txn.b2c_response_code = b2c_result.get('response_code', '')
+                            payment_txn.b2c_result_desc = 'Payout initiated'
+                        else:
+                            payment_txn.b2c_status = 'FAILED'
+                            payment_txn.b2c_result_desc = b2c_result.get('error', 'B2C payout failed')
+                        payment_txn.b2c_attempted_at = timezone.now()
+                        payment_txn.save(update_fields=[
+                            'b2c_status',
+                            'b2c_conversation_id',
+                            'b2c_originator_conversation_id',
+                            'b2c_response_code',
+                            'b2c_result_desc',
+                            'b2c_attempted_at',
+                            'updated_at',
+                        ])
+                    else:
+                        payment_txn.b2c_status = 'FAILED'
+                        payment_txn.b2c_result_desc = 'Missing payout phone or invalid payout amount'
+                        payment_txn.b2c_attempted_at = timezone.now()
+                        payment_txn.save(update_fields=['b2c_status', 'b2c_result_desc', 'b2c_attempted_at', 'updated_at'])
 
                 pending_count = order.transactions.filter(status='PENDING').count()
                 failed_count = order.transactions.filter(status='FAILED').count()

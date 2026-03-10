@@ -88,7 +88,9 @@
                 {% endif %}
 
                 <!-- Statistics Cards -->
+                {% if total_catches is not None or total_posts is not None or total_educational is not None %}
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {% if total_catches is not None %}
                     <div class="bg-white rounded-2xl shadow-lg p-6 text-center transform hover:scale-105 transition-all duration-300 hover:shadow-xl">
                         <div class="text-blue-500 mb-4">
                             <i class="fas fa-fish text-3xl"></i>
@@ -99,7 +101,9 @@
                             <div class="bg-blue-500 h-2 rounded-full" style="width: 75%"></div>
                         </div>
                     </div>
-                    
+                    {% endif %}
+
+                    {% if total_posts is not None %}
                     <div class="bg-white rounded-2xl shadow-lg p-6 text-center transform hover:scale-105 transition-all duration-300 hover:shadow-xl">
                         <div class="text-green-500 mb-4">
                             <i class="fas fa-comments text-3xl"></i>
@@ -110,7 +114,9 @@
                             <div class="bg-green-500 h-2 rounded-full" style="width: 60%"></div>
                         </div>
                     </div>
-                    
+                    {% endif %}
+
+                    {% if total_educational is not None %}
                     <div class="bg-white rounded-2xl shadow-lg p-6 text-center transform hover:scale-105 transition-all duration-300 hover:shadow-xl">
                         <div class="text-yellow-500 mb-4">
                             <i class="fas fa-graduation-cap text-3xl"></i>
@@ -121,7 +127,9 @@
                             <div class="bg-yellow-500 h-2 rounded-full" style="width: 85%"></div>
                         </div>
                     </div>
+                    {% endif %}
                 </div>
+                {% endif %}
                 
                 <!-- Recent Activity -->
                 <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
@@ -144,7 +152,7 @@
                                             <div class="flex items-center justify-between">
                                                 <div>
                                                     <h5 class="font-semibold text-gray-800">{{ catch.fish_type }}</h5>
-                                                    <p class="text-blue-600 font-medium">{{ catch.weight }}kg</p>
+                                                    <p class="text-blue-600 font-medium">{{ catch.available_weight }}kg</p>
                                                 </div>
                                                 <div class="text-right">
                                                     <p class="text-gray-600 text-sm">{{ catch.location }}</p>
@@ -211,7 +219,6 @@
                             <div class="text-center py-12">
                                 <i class="fas fa-clock text-gray-300 text-4xl mb-4"></i>
                                 <p class="text-gray-500 text-lg">No recent activity to display.</p>
-                                <p class="text-gray-400 text-sm mt-2">Start by sharing your catches or creating educational content!</p>
                             </div>
                         {% endif %}
                     </div>

@@ -99,6 +99,8 @@ class CheckoutAndPaymentFlowTests(TestCase):
         self.assertEqual(tx.amount, Decimal('1000.00'))
         self.assertEqual(tx.platform_fee, Decimal('20.00'))
         self.assertEqual(tx.net_payout, Decimal('980.00'))
+        _, kwargs = mock_stk.call_args
+        self.assertIsNone(kwargs['business_shortcode'])
 
     @patch('fishing.views.initiate_stk_push')
     def test_checkout_allows_unverified_fisherman_when_mpesa_config_is_complete(self, mock_stk):
@@ -148,12 +150,19 @@ class CheckoutAndPaymentFlowTests(TestCase):
         _, kwargs = mock_stk.call_args
         self.assertEqual(kwargs['transaction_type'], 'CustomerPayBillOnline')
 
+    @patch('fishing.views.MpesaService')
     @patch('fishing.views.initiate_stk_push')
-    def test_callback_success_marks_fully_paid_and_delivery_in_progress(self, mock_stk):
+    def test_callback_success_marks_fully_paid_and_delivery_in_progress(self, mock_stk, mock_mpesa):
         mock_stk.return_value = {
             'success': True,
             'merchant_request_id': 'MRQ2',
             'checkout_request_id': 'CRQ2',
+        }
+        mock_mpesa.return_value.b2c_payment.return_value = {
+            'success': True,
+            'conversation_id': 'CONV2',
+            'originator_conversation_id': 'ORIG2',
+            'response_code': '0',
         }
 
         self.client.login(username='buyer', password='testpass123')
@@ -194,15 +203,23 @@ class CheckoutAndPaymentFlowTests(TestCase):
         tx = PaymentTransaction.objects.get(order=order)
         self.assertEqual(tx.status, 'COMPLETED')
         self.assertEqual(tx.mpesa_receipt_number, 'NLJ7RT61SV')
+        self.assertEqual(tx.b2c_status, 'SUCCESS')
         self.assertTrue(Delivery.objects.filter(order=order, status='ASSIGNED').exists())
         self.assertTrue(SellerNotification.objects.filter(payment_transaction=tx).exists())
 
+    @patch('fishing.views.MpesaService')
     @patch('fishing.views.initiate_stk_push')
-    def test_duplicate_callback_is_idempotent(self, mock_stk):
+    def test_duplicate_callback_is_idempotent(self, mock_stk, mock_mpesa):
         mock_stk.return_value = {
             'success': True,
             'merchant_request_id': 'MRQ4',
             'checkout_request_id': 'CRQ4',
+        }
+        mock_mpesa.return_value.b2c_payment.return_value = {
+            'success': True,
+            'conversation_id': 'CONV4',
+            'originator_conversation_id': 'ORIG4',
+            'response_code': '0',
         }
 
         self.client.login(username='buyer', password='testpass123')
@@ -236,14 +253,22 @@ class CheckoutAndPaymentFlowTests(TestCase):
 
         tx = PaymentTransaction.objects.get(checkout_request_id='CRQ4')
         self.assertEqual(tx.status, 'COMPLETED')
+        self.assertEqual(tx.b2c_status, 'SUCCESS')
         self.assertEqual(SellerNotification.objects.filter(payment_transaction=tx).count(), 1)
 
+    @patch('fishing.views.MpesaService')
     @patch('fishing.views.initiate_stk_push')
-    def test_api_callback_alias_endpoint_works(self, mock_stk):
+    def test_api_callback_alias_endpoint_works(self, mock_stk, mock_mpesa):
         mock_stk.return_value = {
             'success': True,
             'merchant_request_id': 'MRQ5',
             'checkout_request_id': 'CRQ5',
+        }
+        mock_mpesa.return_value.b2c_payment.return_value = {
+            'success': True,
+            'conversation_id': 'CONV5',
+            'originator_conversation_id': 'ORIG5',
+            'response_code': '0',
         }
         self.client.login(username='buyer', password='testpass123')
         cart = Cart.objects.create(user=self.customer)
@@ -271,12 +296,19 @@ class CheckoutAndPaymentFlowTests(TestCase):
         response = self.client.post('/api/mpesa/callback/', data=json.dumps(payload), content_type='application/json')
         self.assertEqual(response.status_code, 200)
 
+    @patch('fishing.views.MpesaService')
     @patch('fishing.views.initiate_stk_push')
-    def test_fisherman_notification_api_returns_confirmed_payment_details(self, mock_stk):
+    def test_fisherman_notification_api_returns_confirmed_payment_details(self, mock_stk, mock_mpesa):
         mock_stk.return_value = {
             'success': True,
             'merchant_request_id': 'MRQ6',
             'checkout_request_id': 'CRQ6',
+        }
+        mock_mpesa.return_value.b2c_payment.return_value = {
+            'success': True,
+            'conversation_id': 'CONV6',
+            'originator_conversation_id': 'ORIG6',
+            'response_code': '0',
         }
         self.client.login(username='buyer', password='testpass123')
         cart = Cart.objects.create(user=self.customer)
@@ -434,7 +466,7 @@ class DeliveryAndPickupEndpointsTests(TestCase):
             reverse('fishing:delivery_status_update', args=[self.order.order_number]),
             {'status': 'DELIVERED', 'confirmation_code': 'ABC123'}
         )
-        self.assertEqual(ok.status_code, 200)
+        self.assertEqual(ok.status_code, 302)
 
         self.order.refresh_from_db()
         self.delivery.refresh_from_db()

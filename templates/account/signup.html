@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Sign Up - Rechiro{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-[#f5f7f8] py-10 px-4">
+    <div class="max-w-4xl mx-auto">
+        <div class="bg-white rounded-2xl shadow-xl border border-gray-200 p-8 md:p-10">
+            <div class="mb-6">
+                <h1 class="text-3xl font-bold text-gray-900">Sign up</h1>
+                <p class="text-gray-600 mt-2">
+                    {% trans "Already have an account?" %}
+                    <a href="{% url 'account_login' %}" class="font-semibold text-primary hover:underline">{% trans "Sign in" %}</a>.
+                </p>
+            </div>
+
+            <form method="post" action="{% url 'account_signup' %}" class="space-y-5 form-panel">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                <div class="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    {{ form.non_field_errors.0 }}
+                </div>
+                {% endif %}
+
+                {% for field in form %}
+                    <div>
+                        <label for="{{ field.id_for_label }}" class="block mb-2 text-sm font-semibold text-gray-700">
+                            {{ field.label }}
+                        </label>
+                        {{ field }}
+                        {% if field.help_text %}
+                        <p class="text-xs text-gray-500 mt-2">{{ field.help_text }}</p>
+                        {% endif %}
+                        {% for error in field.errors %}
+                        <p class="form-error">{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+
+                {% if redirect_field_value %}
+                <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}">
+                {% endif %}
+
+                <button type="submit" class="w-full bg-primary hover:brightness-95 text-white font-semibold py-3 rounded-lg transition-colors">
+                    {% trans "Sign Up" %}
+                </button>
+            </form>
+
+            <div class="mt-6 text-sm text-gray-500">
+                {% trans "For full marketplace access, please use the main registration form so you can set your role." %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

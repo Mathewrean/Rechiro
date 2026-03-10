@@ -52,7 +52,9 @@
         <!-- Main Content -->
         <div class="lg:col-span-2">
             <!-- Statistics Cards -->
+            {% if total_catches is not None or total_posts is not None or total_educational is not None %}
             <div class="grid md:grid-cols-3 gap-6 mb-8">
+                {% if total_catches is not None %}
                 <div class="bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl p-6 shadow-lg transform hover:scale-105 transition-all duration-300">
                     <div class="flex items-center justify-between">
                         <div>
@@ -64,7 +66,9 @@
                         </div>
                     </div>
                 </div>
+                {% endif %}
                 
+                {% if total_posts is not None %}
                 <div class="bg-gradient-to-r from-green-500 to-green-600 text-white rounded-2xl p-6 shadow-lg transform hover:scale-105 transition-all duration-300">
                     <div class="flex items-center justify-between">
                         <div>
@@ -76,7 +80,9 @@
                         </div>
                     </div>
                 </div>
+                {% endif %}
                 
+                {% if total_educational is not None %}
                 <div class="bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-2xl p-6 shadow-lg transform hover:scale-105 transition-all duration-300">
                     <div class="flex items-center justify-between">
                         <div>
@@ -88,7 +94,9 @@
                         </div>
                     </div>
                 </div>
+                {% endif %}
             </div>
+            {% endif %}
             
             <!-- Content Tabs -->
             <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
@@ -120,7 +128,7 @@
                                     <div class="bg-gray-50 rounded-lg p-4 border-l-4 border-blue-500 hover:bg-gray-100 transition-colors duration-200">
                                         <div class="flex justify-between items-start">
                                             <div>
-                                                <h6 class="font-semibold text-gray-800">{{ catch.fish_type }} - {{ catch.weight }}kg</h6>
+                                                <h6 class="font-semibold text-gray-800">{{ catch.fish_type }} - {{ catch.available_weight }}kg</h6>
                                                 <p class="text-gray-600 text-sm">
                                                     <i class="fas fa-map-marker-alt mr-1"></i>{{ catch.location }}
                                                 </p>

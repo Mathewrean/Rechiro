@@ -26,11 +26,6 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', default="*").split(',')
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8000",
     "http://127.0.1:8000",
-    "https://sustainablefishing.onrender.com",
-    "https://*.ngrok.io",
-    "https://*.ngrok-free.app",
-    "https://*.ngrok-free.dev",
-    "https://*.ngrok.app",
     "https://albert-incult-superfluously.ngrok-free.dev",
 ]
 CORS_ALLOWED_ORIGINS = [
@@ -147,7 +142,13 @@ STATICFILES_DIRS = [
 
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 if importlib.util.find_spec("whitenoise") is not None:
-    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+    manifest_path = BASE_DIR / "staticfiles" / "staticfiles.json"
+    if manifest_path.exists():
+        STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+    else:
+        STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
+    # Serve assets from STATICFILES_DIRS without requiring collectstatic.
+    WHITENOISE_USE_FINDERS = True
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -170,16 +171,11 @@ ACCOUNT_AUTHENTICATION_METHOD = "username_email"
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_EMAIL_VERIFICATION = "none"
 SOCIALACCOUNT_LOGIN_ON_GET = True
-GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID')
-GOOGLE_CLIENT_SECRET = config('GOOGLE_CLIENT_SECRET')
+GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID', default='')
+GOOGLE_CLIENT_SECRET = config('GOOGLE_CLIENT_SECRET', default='')
 
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
-        "APP": {
-            "client_id": GOOGLE_CLIENT_ID,
-            "secret": GOOGLE_CLIENT_SECRET,
-            "key": "",
-        },
         "SCOPE": ["profile", "email"],
         "AUTH_PARAMS": {"access_type": "online"},
     }
@@ -196,7 +192,7 @@ MPESA_CONSUMER_KEY = config('MPESA_CONSUMER_KEY', default='FcbgCgnnIxIEY9fFWRl9P
 MPESA_CONSUMER_SECRET = config('MPESA_CONSUMER_SECRET', default='e8M2xIKQo7ppCF3rKJdcR4XxYYw04LJa7HlVm8IDXmo8pPxzPoRp4jQcg2WiJxe8')
 MPESA_BUSINESS_SHORT_CODE = config('MPESA_BUSINESS_SHORT_CODE', default='174379')
 MPESA_PASSKEY = config('MPESA_PASSKEY', default='bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919')
-MPESA_CALLBACK_URL = config('MPESA_CALLBACK_URL', default='https://05fc-41-90-11-251.ngrok-free.app/api/mpesa/callback/')
+MPESA_CALLBACK_URL = config('MPESA_CALLBACK_URL', default='https://albert-incult-superfluously.ngrok-free.dev/api/mpesa/callback/')
 MPESA_BASE_URL = config('MPESA_BASE_URL', default='https://sandbox.safaricom.co.ke')
 
 # For B2C payments (refunds)
