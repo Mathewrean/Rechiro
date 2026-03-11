@@ -203,7 +203,7 @@ class CheckoutAndPaymentFlowTests(TestCase):
         tx = PaymentTransaction.objects.get(order=order)
         self.assertEqual(tx.status, 'COMPLETED')
         self.assertEqual(tx.mpesa_receipt_number, 'NLJ7RT61SV')
-        self.assertEqual(tx.b2c_status, 'SUCCESS')
+        self.assertEqual(tx.b2c_status, 'PENDING')
         self.assertTrue(Delivery.objects.filter(order=order, status='ASSIGNED').exists())
         self.assertTrue(SellerNotification.objects.filter(payment_transaction=tx).exists())
 
@@ -253,7 +253,7 @@ class CheckoutAndPaymentFlowTests(TestCase):
 
         tx = PaymentTransaction.objects.get(checkout_request_id='CRQ4')
         self.assertEqual(tx.status, 'COMPLETED')
-        self.assertEqual(tx.b2c_status, 'SUCCESS')
+        self.assertEqual(tx.b2c_status, 'PENDING')
         self.assertEqual(SellerNotification.objects.filter(payment_transaction=tx).count(), 1)
 
     @patch('fishing.views.MpesaService')
@@ -343,6 +343,70 @@ class CheckoutAndPaymentFlowTests(TestCase):
         self.assertGreaterEqual(body.get('unread_count', 0), 1)
         latest = body['notifications'][0]
         self.assertEqual(latest['receipt_number'], 'NOTICE6')
+
+    @patch('fishing.views.MpesaService')
+    @patch('fishing.views.initiate_stk_push')
+    def test_b2c_result_updates_payout_status(self, mock_stk, mock_mpesa):
+        mock_stk.return_value = {
+            'success': True,
+            'merchant_request_id': 'MRQ7',
+            'checkout_request_id': 'CRQ7',
+        }
+        mock_mpesa.return_value.b2c_payment.return_value = {
+            'success': True,
+            'conversation_id': 'CONV-B2C',
+            'originator_conversation_id': 'ORIG-B2C',
+            'response_code': '0',
+        }
+
+        self.client.login(username='buyer', password='testpass123')
+        cart = Cart.objects.create(user=self.customer)
+        CartItem.objects.create(cart=cart, fish=self.fish, weight_kg=Decimal('1.00'))
+        self.client.post(reverse('fishing:checkout_process'), {
+            'fulfillment_method': 'delivery',
+            'delivery_location': 'Nairobi CBD',
+        })
+
+        callback_payload = {
+            'Body': {
+                'stkCallback': {
+                    'MerchantRequestID': 'MRQ7',
+                    'CheckoutRequestID': 'CRQ7',
+                    'ResultCode': 0,
+                    'ResultDesc': 'The service request is processed successfully.',
+                    'CallbackMetadata': {
+                        'Item': [
+                            {'Name': 'Amount', 'Value': 500},
+                            {'Name': 'MpesaReceiptNumber', 'Value': 'NLJ7RT61SB'},
+                        ]
+                    }
+                }
+            }
+        }
+        self.client.post(
+            reverse('fishing:mpesa_callback'),
+            data=json.dumps(callback_payload),
+            content_type='application/json',
+        )
+
+        b2c_payload = {
+            'Result': {
+                'ConversationID': 'CONV-B2C',
+                'OriginatorConversationID': 'ORIG-B2C',
+                'ResultCode': 0,
+                'ResultDesc': 'Success',
+                'TransactionID': 'B2C123',
+            }
+        }
+        response = self.client.post(
+            '/api/mpesa/b2c/result/',
+            data=json.dumps(b2c_payload),
+            content_type='application/json',
+        )
+        self.assertEqual(response.status_code, 200)
+        tx = PaymentTransaction.objects.get(checkout_request_id='CRQ7')
+        self.assertEqual(tx.b2c_status, 'SUCCESS')
+        self.assertEqual(tx.b2c_transaction_id, 'B2C123')
 
     def test_phone_verification_callback_marks_user_phone_verified(self):
         self.fisherman.phone_verified = False

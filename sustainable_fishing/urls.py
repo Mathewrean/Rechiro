@@ -6,7 +6,7 @@ from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.contrib.staticfiles.views import serve as static_serve
 from django.urls import path, include, re_path
 from django.views.generic import RedirectView
-from fishing.views import mpesa_callback
+from fishing.views import mpesa_callback, mpesa_b2c_result, mpesa_b2c_timeout
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -14,6 +14,8 @@ urlpatterns = [
     path('choose-role/', RedirectView.as_view(url='/users/choose-role/', permanent=False), name='choose_role_root'),
     path('users/', include('users.urls')),
     path('api/mpesa/callback/', mpesa_callback, name='api_mpesa_callback'),
+    path('api/mpesa/b2c/result/', mpesa_b2c_result, name='api_mpesa_b2c_result'),
+    path('api/mpesa/b2c/timeout/', mpesa_b2c_timeout, name='api_mpesa_b2c_timeout'),
     path('fishing/', include('fishing.urls')),
     # Content app removed - e-commerce only
 ]

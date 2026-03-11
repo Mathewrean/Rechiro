@@ -24,6 +24,8 @@ urlpatterns = [
     
     # M-Pesa Callback
     path('mpesa/callback/', views.mpesa_callback, name='mpesa_callback'),
+    path('mpesa/b2c/result/', views.mpesa_b2c_result, name='mpesa_b2c_result'),
+    path('mpesa/b2c/timeout/', views.mpesa_b2c_timeout, name='mpesa_b2c_timeout'),
     
     # Fisherman Dashboard
     path('fisherman/dashboard/', views.fisherman_dashboard, name='fisherman_dashboard'),

@@ -201,6 +201,12 @@
                             {% if transaction.mpesa_receipt_number %}
                             <p class="text-xs text-gray-500 mt-1">M-Pesa: {{ transaction.mpesa_receipt_number }}</p>
                             {% endif %}
+                            <p class="text-xs text-gray-500 mt-1">Platform Fee (2%): KES {{ transaction.platform_fee|floatformat:2 }}</p>
+                            <p class="text-xs text-gray-500 mt-1">Seller Payout (98%): KES {{ transaction.net_payout|floatformat:2 }}</p>
+                            <p class="text-xs text-gray-500 mt-1">Payout Status: {{ transaction.b2c_status }}</p>
+                            {% if transaction.b2c_transaction_id %}
+                            <p class="text-xs text-gray-500 mt-1">Payout Txn: {{ transaction.b2c_transaction_id }}</p>
+                            {% endif %}
                         </div>
                         {% endfor %}
                     </div>

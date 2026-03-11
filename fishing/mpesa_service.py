@@ -204,6 +204,21 @@ class MpesaService:
             timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
             password = self.generate_password(timestamp)
             
+            callback_base_url = getattr(settings, 'MPESA_CALLBACK_BASE_URL', '').strip()
+            if not callback_base_url:
+                callback_url = (self.callback_url or '').rstrip('/')
+                if callback_url.endswith('/api/mpesa/callback'):
+                    callback_base_url = callback_url[: -len('/callback')]
+                else:
+                    callback_base_url = callback_url
+
+            result_url = getattr(settings, 'MPESA_B2C_RESULT_URL', '').strip()
+            timeout_url = getattr(settings, 'MPESA_B2C_TIMEOUT_URL', '').strip()
+            if not result_url:
+                result_url = f"{callback_base_url}/b2c/result/"
+            if not timeout_url:
+                timeout_url = f"{callback_base_url}/b2c/timeout/"
+
             payload = {
                 "InitiatorName": getattr(settings, 'MPESA_INITIATOR_NAME', ''),
                 "SecurityCredential": getattr(settings, 'MPESA_SECURITY_CREDENTIAL', ''),
@@ -212,8 +227,8 @@ class MpesaService:
                 "PartyA": self.business_short_code,
                 "PartyB": phone_number,
                 "Remarks": remarks,
-                "QueueTimeOutURL": f"{self.callback_url}/b2c/timeout",
-                "ResultURL": f"{self.callback_url}/b2c/result",
+                "QueueTimeOutURL": timeout_url,
+                "ResultURL": result_url,
                 "Occasion": "Refund"
             }
             

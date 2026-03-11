@@ -10,6 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.conf import settings
 from decimal import Decimal
+import json
 import logging
 from urllib.parse import urlparse
 
@@ -674,11 +675,11 @@ def mpesa_callback(request):
                             remarks=f"Payout for Order #{order.order_number}"
                         )
                         if b2c_result.get('success'):
-                            payment_txn.b2c_status = 'SUCCESS'
+                            payment_txn.b2c_status = 'PENDING'
                             payment_txn.b2c_conversation_id = b2c_result.get('conversation_id', '')
                             payment_txn.b2c_originator_conversation_id = b2c_result.get('originator_conversation_id', '')
                             payment_txn.b2c_response_code = b2c_result.get('response_code', '')
-                            payment_txn.b2c_result_desc = 'Payout initiated'
+                            payment_txn.b2c_result_desc = 'Payout requested'
                         else:
                             payment_txn.b2c_status = 'FAILED'
                             payment_txn.b2c_result_desc = b2c_result.get('error', 'B2C payout failed')
@@ -753,6 +754,95 @@ def mpesa_callback(request):
     except Exception as e:
         logger.exception('Error processing M-Pesa callback')
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def mpesa_b2c_result(request):
+    """Handle M-Pesa B2C result callback."""
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Invalid method'}, status=400)
+    try:
+        raw_data = request.body.decode('utf-8')
+        logger.info('M-Pesa B2C result payload: %s', raw_data)
+        data = json.loads(raw_data or '{}')
+        result = data.get('Result') or data.get('result') or {}
+
+        originator_id = result.get('OriginatorConversationID') or result.get('originatorConversationID')
+        conversation_id = result.get('ConversationID') or result.get('conversationID')
+        result_code_raw = result.get('ResultCode')
+        result_desc = result.get('ResultDesc', '')
+        transaction_id = result.get('TransactionID', '')
+
+        try:
+            result_code = int(result_code_raw)
+        except (TypeError, ValueError):
+            result_code = -1
+
+        with transaction.atomic():
+            payment_txn = PaymentTransaction.objects.select_for_update().filter(
+                models.Q(b2c_originator_conversation_id=originator_id) |
+                models.Q(b2c_conversation_id=conversation_id)
+            ).first()
+            if not payment_txn:
+                logger.error('B2C result transaction not found for originator=%s conversation=%s', originator_id, conversation_id)
+                return JsonResponse({'status': 'error', 'message': 'Transaction not found'}, status=404)
+
+            if payment_txn.b2c_status in ['SUCCESS', 'FAILED']:
+                return JsonResponse({'status': 'success', 'message': 'Already processed'})
+
+            if result_code == 0:
+                payment_txn.b2c_status = 'SUCCESS'
+            else:
+                payment_txn.b2c_status = 'FAILED'
+
+            payment_txn.b2c_response_code = str(result_code_raw or '')
+            payment_txn.b2c_result_desc = result_desc or payment_txn.b2c_result_desc
+            payment_txn.b2c_transaction_id = transaction_id or payment_txn.b2c_transaction_id
+            payment_txn.save(update_fields=[
+                'b2c_status',
+                'b2c_response_code',
+                'b2c_result_desc',
+                'b2c_transaction_id',
+                'updated_at',
+            ])
+        return JsonResponse({'status': 'success'})
+    except Exception:
+        logger.exception('Error processing M-Pesa B2C result callback')
+        return JsonResponse({'status': 'error', 'message': 'Server error'}, status=500)
+
+
+@csrf_exempt
+def mpesa_b2c_timeout(request):
+    """Handle M-Pesa B2C timeout callback."""
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Invalid method'}, status=400)
+    try:
+        raw_data = request.body.decode('utf-8')
+        logger.info('M-Pesa B2C timeout payload: %s', raw_data)
+        data = json.loads(raw_data or '{}')
+        result = data.get('Result') or data.get('result') or {}
+        originator_id = result.get('OriginatorConversationID') or result.get('originatorConversationID')
+        conversation_id = result.get('ConversationID') or result.get('conversationID')
+
+        with transaction.atomic():
+            payment_txn = PaymentTransaction.objects.select_for_update().filter(
+                models.Q(b2c_originator_conversation_id=originator_id) |
+                models.Q(b2c_conversation_id=conversation_id)
+            ).first()
+            if not payment_txn:
+                logger.error('B2C timeout transaction not found for originator=%s conversation=%s', originator_id, conversation_id)
+                return JsonResponse({'status': 'error', 'message': 'Transaction not found'}, status=404)
+
+            if payment_txn.b2c_status in ['SUCCESS', 'FAILED', 'TIMEOUT']:
+                return JsonResponse({'status': 'success', 'message': 'Already processed'})
+
+            payment_txn.b2c_status = 'TIMEOUT'
+            payment_txn.b2c_result_desc = 'B2C timeout'
+            payment_txn.save(update_fields=['b2c_status', 'b2c_result_desc', 'updated_at'])
+        return JsonResponse({'status': 'success'})
+    except Exception:
+        logger.exception('Error processing M-Pesa B2C timeout callback')
+        return JsonResponse({'status': 'error', 'message': 'Server error'}, status=500)
 
 
 @login_required

@@ -292,6 +292,7 @@ class PaymentTransaction(models.Model):
     b2c_originator_conversation_id = models.CharField(max_length=100, blank=True)
     b2c_response_code = models.CharField(max_length=20, blank=True)
     b2c_result_desc = models.TextField(blank=True)
+    b2c_transaction_id = models.CharField(max_length=100, blank=True)
     b2c_attempted_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
