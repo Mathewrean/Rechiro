@@ -19,7 +19,7 @@
                         <div class="p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
                             <!-- Fish Image -->
                             <div class="w-24 h-24 flex-shrink-0 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg overflow-hidden">
-                                {% if item.fish.image %}
+                                {% if item.fish.has_image_file %}
                                 <img src="{{ item.fish.image.url }}" alt="{{ item.fish.name }}" class="w-full h-full object-cover">
                                 {% else %}
                                 <div class="w-full h-full flex items-center justify-center">
@@ -143,4 +143,3 @@
     </div>
 </div>
 {% endblock %}
-

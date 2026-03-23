@@ -1,0 +1,27 @@
+{
+  "name": "Rechiro Marketplace",
+  "short_name": "Rechiro",
+  "description": "Fresh fish marketplace direct from Lake Victoria fishermen.",
+  "start_url": "/fishing/home/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0b5d66",
+  "icons": [
+    {
+      "src": "/static/branding/rechiro-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/branding/rechiro-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/branding/rechiro-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

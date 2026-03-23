@@ -19,7 +19,7 @@
                 <!-- Fish Image -->
                 <div class="relative">
                     <div class="aspect-square rounded-xl overflow-hidden bg-gradient-to-br from-blue-50 to-blue-100">
-                        {% if fish.image %}
+                        {% if fish.has_image_file %}
                         <img src="{{ fish.image.url }}" alt="{{ fish.name }}" class="w-full h-full object-cover">
                         {% else %}
                         <div class="w-full h-full flex flex-col items-center justify-center">
@@ -197,4 +197,3 @@
     </div>
 </div>
 {% endblock %}
-

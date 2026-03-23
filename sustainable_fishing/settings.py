@@ -20,11 +20,27 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY', default="django-insecure-ki)+%eng&-v5u$z%5_7^=o#gm3i(muw2$_8t)_)$uht=$i8nmp")
 
-DEBUG = config('DEBUG', default=True, cast=bool)
+def _parse_bool(value):
+    if value is None:
+        return False
+    if isinstance(value, bool):
+        return value
+    normalized = str(value).strip().lower()
+    if normalized in {"1", "true", "yes", "y", "on", "debug"}:
+        return True
+    if normalized in {"0", "false", "no", "n", "off", "release", "prod", "production"}:
+        return False
+    return False
+
+DEBUG = config('DEBUG', default=False, cast=_parse_bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default="*").split(',')
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8000",
+    "http://127.0.0.1:8000",
+    "http://0.0.0.0:8000",
+    # The 127.0.1:8000 entry is kept for legacy/testing environments but
+    # 127.0.0.1 is usually used by Django's runserver and browsers.
     "http://127.0.1:8000",
     "https://albert-incult-superfluously.ngrok-free.dev",
 ]
@@ -167,8 +183,8 @@ AUTHENTICATION_BACKENDS = tuple(AUTHENTICATION_BACKENDS)
 LOGIN_REDIRECT_URL = "/users/dashboard/"
 LOGOUT_REDIRECT_URL = "/users/login/"
 
-ACCOUNT_AUTHENTICATION_METHOD = "username_email"
-ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_LOGIN_METHODS = {"username", "email"}
+ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
 ACCOUNT_EMAIL_VERIFICATION = "none"
 SOCIALACCOUNT_LOGIN_ON_GET = True
 GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID', default='')
@@ -182,6 +198,8 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 if ALLAUTH_INSTALLED:
     SOCIALACCOUNT_ADAPTER = "users.adapters.RechiroSocialAccountAdapter"
+
+CSRF_FAILURE_VIEW = "users.views.csrf_failure_view"
 
  
 # M-Pesa Daraja API Configuration

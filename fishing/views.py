@@ -1243,6 +1243,41 @@ def customer_dashboard(request):
 
 
 @login_required
+def admin_dashboard(request):
+    if not request.user.is_staff and request.user.role != 'admin':
+        messages.error(request, 'Access denied. Admin role required.')
+        return redirect('users:profile')
+
+    user_counts = {
+        'fishermen': User.objects.filter(role='fisherman').count(),
+        'customers': User.objects.filter(role='customer').count(),
+        'delivery': User.objects.filter(role='delivery').count(),
+        'chairmen': User.objects.filter(role='chairman').count(),
+    }
+
+    orders = Order.objects.order_by('-created_at')[:5]
+    deliveries = Delivery.objects.order_by('-updated_at')[:5]
+    total_orders = Order.objects.count()
+    pending_orders = Order.objects.filter(status__in=['PENDING', 'PAID', 'FULLY_PAID', 'DELIVERY_IN_PROGRESS', 'PROCESSING']).count()
+    delivery_counts = {
+        'assigned': Delivery.objects.filter(assigned_agent__isnull=False).count(),
+        'unassigned': Delivery.objects.filter(assigned_agent__isnull=True).count(),
+        'completed': Delivery.objects.filter(status='DELIVERED').count(),
+    }
+
+    context = {
+        'user_counts': user_counts,
+        'total_orders': total_orders,
+        'pending_orders': pending_orders,
+        'orders': orders,
+        'deliveries': deliveries,
+        'delivery_counts': delivery_counts,
+        'title': 'Admin Dashboard',
+    }
+    return render(request, 'fishing/admin_dashboard.html', context)
+
+
+@login_required
 def delivery_tracking(request, order_number):
     """Track delivery status"""
     order = get_object_or_404(Order, order_number=order_number, customer=request.user)

@@ -50,6 +50,7 @@ urlpatterns = [
     path('delivery/dashboard/', views.delivery_dashboard, name='delivery_dashboard'),
     path('delivery/orders/<str:order_number>/claim/', views.delivery_claim, name='delivery_claim'),
     path('delivery/orders/<str:order_number>/status/', views.delivery_status_update, name='delivery_status_update'),
+    path('admin/dashboard/', views.admin_dashboard, name='admin_dashboard'),
     
     # API
     path('api/cart/add/<int:fish_id>/', views.api_add_to_cart, name='api_add_to_cart'),

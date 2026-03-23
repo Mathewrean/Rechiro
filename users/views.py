@@ -102,6 +102,15 @@ def _initiate_phone_verification_stk(user):
     return stk_result
 
 
+def csrf_failure_view(request, reason=""):
+    """Custom handler for CSRF failures to keep login flow usable."""
+    messages.error(
+        request,
+        "Security token expired or was rejected. Please refresh the page and try logging in again."
+    )
+    return redirect('users:login')
+
+
 def register_view(request):
     """Handle user registration"""
     if request.user.is_authenticated:
@@ -137,8 +146,17 @@ def register_view(request):
             else:
                 messages.info(request, 'Account created. Please verify your email before checkout.')
 
-            messages.success(request, f'Account created successfully for {username}! Please log in to continue.')
-            return redirect('users:login')
+            messages.success(request, f'Account created successfully for {username}! You are now logged in.')
+
+            # Auto-login new users and redirect to the appropriate dashboard.
+            login(request, user)
+            role_redirect_map = {
+                'fisherman': 'fishing:fisherman_dashboard',
+                'customer': 'fishing:customer_dashboard',
+                'delivery': 'fishing:delivery_dashboard',
+                'chairman': 'fishing:chairman_approval_queue',
+            }
+            return redirect(role_redirect_map.get(user.role, 'fishing:home'))
     else:
         form = UserRegistrationForm()
     
@@ -151,9 +169,46 @@ def register_view(request):
 
 def login_view(request):
     """Handle user login"""
+    def _ensure_google_social_app():
+        if not getattr(settings, 'ALLAUTH_INSTALLED', False):
+            return False
+        client_id = getattr(settings, 'GOOGLE_CLIENT_ID', '')
+        client_secret = getattr(settings, 'GOOGLE_CLIENT_SECRET', '')
+        if not client_id or not client_secret:
+            return False
+        try:
+            from allauth.socialaccount.models import SocialApp
+            from django.contrib.sites.models import Site
+        except Exception:
+            return False
+        app, created = SocialApp.objects.get_or_create(
+            provider='google',
+            defaults={
+                'name': 'Google',
+                'client_id': client_id,
+                'secret': client_secret,
+            }
+        )
+        updated_fields = []
+        if app.client_id != client_id:
+            app.client_id = client_id
+            updated_fields.append('client_id')
+        if app.secret != client_secret:
+            app.secret = client_secret
+            updated_fields.append('secret')
+        if updated_fields:
+            app.save(update_fields=updated_fields)
+        try:
+            site = Site.objects.get_current()
+            if not app.sites.filter(id=site.id).exists():
+                app.sites.add(site)
+        except Exception:
+            return True
+        return True
+
     google_oauth_enabled = False
     if getattr(settings, 'ALLAUTH_INSTALLED', False):
-        if getattr(settings, 'GOOGLE_CLIENT_ID', '') and getattr(settings, 'GOOGLE_CLIENT_SECRET', ''):
+        if _ensure_google_social_app():
             google_oauth_enabled = True
         else:
             try:
@@ -161,28 +216,39 @@ def login_view(request):
                 google_oauth_enabled = SocialApp.objects.filter(provider='google').exists()
             except Exception:
                 google_oauth_enabled = False
+
     if request.user.is_authenticated:
-        return redirect('users:profile')
+        role_redirect_map = {
+            'fisherman': 'fishing:fisherman_dashboard',
+            'customer': 'fishing:customer_dashboard',
+            'delivery': 'fishing:delivery_dashboard',
+            'chairman': 'fishing:chairman_approval_queue',
+        }
+        return redirect(role_redirect_map.get(request.user.role, 'fishing:home'))
     
+    next_url = request.GET.get('next') or request.POST.get('next')
+
     if request.method == 'POST':
         form = UserLoginForm(request, data=request.POST)
         if form.is_valid():
-            username = form.cleaned_data.get('username')
-            password = form.cleaned_data.get('password')
-            user = authenticate(username=username, password=password)
+            user = form.get_user()
             if user is not None:
                 login(request, user)
                 if not user.email_verified:
                     messages.warning(request, 'Please verify your email to unlock full purchase features.')
                 messages.success(request, f'Welcome back, {user.full_name or user.username}!')
-                next_url = request.GET.get('next')
-                # Redirect to appropriate dashboard based on role
-                if not next_url:
-                    if user.role == 'fisherman':
-                        next_url = 'fishing:fisherman_dashboard'
-                    else:
-                        next_url = 'fishing:customer_dashboard'
-                return redirect(next_url)
+            # Redirect to appropriate dashboard based on role
+            if not next_url:
+                role_redirect_map = {
+                    'fisherman': 'fishing:fisherman_dashboard',
+                    'customer': 'fishing:customer_dashboard',
+                    'delivery': 'fishing:delivery_dashboard',
+                    'chairman': 'fishing:chairman_approval_queue',
+                }
+                next_url = role_redirect_map.get(user.role, 'fishing:home')
+            return redirect(next_url)
+        else:
+            messages.error(request, 'Login failed. Please double-check your username and password.')
     else:
         form = UserLoginForm()
     
@@ -190,6 +256,7 @@ def login_view(request):
         'form': form,
         'title': 'Login - Rechiro',
         'google_oauth_enabled': google_oauth_enabled,
+        'next': next_url,
     }
     return render(request, 'users/login.html', context)
 

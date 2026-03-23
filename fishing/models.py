@@ -2,6 +2,7 @@ from django.db import models
 from django.conf import settings
 from django.urls import reverse
 from django.core.exceptions import ValidationError
+from django.core.files.storage import default_storage
 from decimal import Decimal
 import uuid
 
@@ -48,7 +49,16 @@ class Fish(models.Model):
     
     def __str__(self):
         return f"{self.name} - {self.fish_type} ({self.available_weight}kg @ KES {self.price_per_kg}/kg)"
-    
+
+    @property
+    def has_image_file(self):
+        if not self.image:
+            return False
+        try:
+            return default_storage.exists(self.image.name)
+        except Exception:
+            return False
+
     def get_absolute_url(self):
         return reverse('fishing:fish_detail', kwargs={'fish_id': self.pk})
     

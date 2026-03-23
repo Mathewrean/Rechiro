@@ -81,7 +81,7 @@
             {% for fish in featured_fish %}
             <div class="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
                 <div class="aspect-square bg-gradient-to-br from-blue-50 to-blue-100 relative">
-                    {% if fish.image %}
+                    {% if fish.has_image_file %}
                     <img src="{{ fish.image.url }}" alt="{{ fish.name }}" class="w-full h-full object-cover">
                     {% else %}
                     <div class="w-full h-full flex items-center justify-center">
