@@ -1,6 +1,10 @@
+{% load static %}
+{% load django_config_tag %}
 <!-- Floating WhatsApp Support Button -->
-<a href="https://wa.me/254700000000" target="_blank" rel="noopener noreferrer" 
+{% with wa_number="254701618286" %}
+<a href="https://wa.me/{{ wa_number }}" target="_blank" rel="noopener noreferrer" 
    class="fixed bottom-20 right-4 bg-green-500 hover:bg-green-600 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg z-40 transition-transform hover:scale-110">
     <i class="fab fa-whatsapp text-2xl"></i>
     <span class="sr-only">Chat with us on WhatsApp</span>
 </a>
+{% endwith %}
