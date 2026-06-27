@@ -117,6 +117,13 @@
             font-size: 0.85rem;
             color: #dc2626;
         }
+        #emailVerificationModal.active {
+            display: flex !important;
+        }
+        #emailVerificationModal.active > div {
+            transform: scale(1);
+            opacity: 1;
+        }
         .form-panel .form-actions {
             display: flex;
             flex-wrap: wrap;
@@ -374,6 +381,24 @@
         </div>
     </nav>
 
+    <!-- Email Verification Modal -->
+    <div id="emailVerificationModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center">
+        <div class="bg-white rounded-2xl shadow-lg max-w-md w-full mx-4 p-6 transform scale-95 opacity-0 transition-all duration-300">
+            <div class="text-center">
+                <i class="fas fa-envelope-open-text text-4xl text-primary mb-4"></i>
+                <h2 class="text-xl font-bold text-gray-800 mb-2">Verify Your Email</h2>
+                <p class="text-gray-600 mb-4">Please verify your email address to unlock full features.</p>
+                <p class="text-sm text-gray-500 mb-6">Current email: <span class="font-medium">{{ user.email|default:"Not set" }}</span></p>
+                <div class="flex flex-col gap-3">
+                    <a href="{% url 'users:email_verification' %}" class="bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg font-medium transition-colors block">
+                        <i class="fas fa-paper-plane mr-2"></i>Send Verification Email
+                    </a>
+                    <button id="closeVerificationModal" class="text-gray-500 hover:text-gray-700 text-sm">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Spacer for navbar -->
     <div class="h-16"></div>
 
@@ -499,9 +524,27 @@
         </div>
     </footer>
 
+<script>
+        window.USER_NEEDS_EMAIL_VERIFICATION = {% if user.is_authenticated and not user.email_verified %}true{% else %}false{% endif %};
+        window.USER_EMAIL = '{{ user.email|escapejs }}';
+        (function() {
+            var emailModal = document.getElementById('emailVerificationModal');
+            if (emailModal && window.USER_NEEDS_EMAIL_VERIFICATION && window.USER_EMAIL) {
+                emailModal.classList.add('active');
+                document.body.classList.add('overflow-hidden');
+            }
+            function closeModal() {
+                if (emailModal) {
+                    emailModal.classList.remove('active');
+                    document.body.classList.remove('overflow-hidden');
+                }
+            }
+            document.getElementById('closeVerificationModal')?.addEventListener('click', closeModal);
+        })();
+    </script>
     <script>
-        // Navigation functionality
         document.addEventListener('DOMContentLoaded', function() {
+            // Auto-refresh unchanged
             const mobileMenuBtn = document.getElementById('mobile-menu-btn');
             const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
             const mobileSidebar = document.getElementById('mobile-sidebar');
@@ -582,9 +625,7 @@
                 }
             });
 
-            // Safe auto-refresh:
-            // refresh only when page is hidden and there are no unsaved form changes.
-            const AUTO_REFRESH_MS = 60000; // 1 minute
+            const AUTO_REFRESH_MS = 60000;
             const dirtyKey = `fishnet:dirty:${window.location.pathname}`;
             let hasUnsavedChanges = sessionStorage.getItem(dirtyKey) === '1';
 
