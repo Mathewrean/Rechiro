@@ -57,7 +57,6 @@ def create_google_social_app_and_site(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('socialaccount', '0006_alter_socialaccount_extra_data'),
         ('sites', '0002_alter_domain_unique'),
         ('users', '0006_alter_user_role'),
     ]
