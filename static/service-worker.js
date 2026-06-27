@@ -3,12 +3,14 @@ const ASSETS_TO_CACHE = [
   '/',
   '/fishing/home/',
   '/fishing/',
-  '/static/branding/rechiro-logo.svg',
+  '/static/branding/rechiro_logo.png',
   '/static/branding/rechiro-192.png',
   '/static/branding/rechiro-512.png',
-  '/static/manifest.json'
+  '/static/manifest.json',
+  '/static/style.css'
 ];
-const IMAGE_FALLBACK = '/static/branding/rechiro-logo.svg';
+const IMAGE_FALLBACK = '/static/branding/rechiro-512.png';
+const CATALOG_URL = '/fishing/api/catalog/';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -28,8 +30,25 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Catalog caching for offline access
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') {
+    return;
+  }
+
+  const url = new URL(event.request.url);
+  
+  // Cache fish catalog for offline access
+  if (url.pathname === CATALOG_URL || url.pathname.includes('/fishing/marketplace/')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
     return;
   }
 
@@ -37,11 +56,10 @@ self.addEventListener('fetch', (event) => {
     (event.request.headers.get('accept') || '').includes('text/html');
 
   if (isHtmlRequest) {
-    // Use network-first for HTML pages so login state and dynamic content stays fresh.
+    // Network-first for HTML pages
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          // Only cache successful (200) same-origin HTML responses.
           if (response && response.status === 200 && response.type === 'basic') {
             const responseClone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
@@ -53,7 +71,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first for other assets (images, CSS, JS, etc.)
+  // Cache-first for static assets
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) {
@@ -76,4 +94,15 @@ self.addEventListener('fetch', (event) => {
         });
     })
   );
+});
+
+// Handle offline cart sync
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'sync-cart') {
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window' }).then((clients) => {
+        clients.forEach((client) => client.postMessage({ type: 'SYNC_CART' }));
+      })
+    );
+  }
 });
