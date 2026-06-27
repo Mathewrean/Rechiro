@@ -39,15 +39,15 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8000",
     "http://127.0.0.1:8000",
     "http://0.0.0.0:8000",
-    # The 127.0.1:8000 entry is kept for legacy/testing environments but
-    # 127.0.0.1 is usually used by Django's runserver and browsers.
     "http://127.0.1:8000",
     "https://albert-incult-superfluously.ngrok-free.dev",
+    "https://rechiro-production.up.railway.app",
 ]
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8000",
     "http://127.0.1:8000",
     "https://sustainablefishing.onrender.com",
+    "https://rechiro-production.up.railway.app",
     "https://*.ngrok.io",
     "https://*.ngrok-free.app",
     "https://*.ngrok-free.dev",
