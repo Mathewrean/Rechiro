@@ -8,15 +8,16 @@
         <div class="bg-white rounded-2xl shadow-xl border border-slate-100 p-8">
             <div class="mb-6 text-center">
                 <h1 class="text-2xl font-bold text-slate-800">Complete Your Account</h1>
-                <p class="text-slate-600 mt-2">We imported your Google account. Fill in the missing details.</p>
+                <p class="text-slate-600 mt-2">We imported your Google account. Choose your role and fill in the missing details.</p>
             </div>
 
-            <form method="post" class="space-y-5 form-panel">
+            <form method="post" class="space-y-5" id="signup-form">
                 {% csrf_token %}
                 {% for hidden in form.hidden_fields %}
                     {{ hidden }}
                 {% endfor %}
                 {% for field in form.visible_fields %}
+                    {% if field.name != 'role' %}
                     <div>
                         <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-slate-700 mb-2">
                             {{ field.label }}
@@ -29,7 +30,60 @@
                             <p class="text-sm text-red-600 mt-1">{{ field.errors|striptags }}</p>
                         {% endif %}
                     </div>
+                    {% endif %}
                 {% endfor %}
+
+                <div class="space-y-3">
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Select Your Role *</label>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                            <input type="radio" id="role_fisherman" name="role" value="fisherman" class="peer sr-only" required {% if form.role.value == 'fisherman' %}checked{% endif %}>
+                            <label for="role_fisherman" class="block cursor-pointer">
+                                <div class="p-4 border-2 border-gray-200 rounded-xl hover:border-blue-400 transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-blue-50">
+                                    <div class="text-center">
+                                        <div class="mx-auto h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center mb-2">
+                                            <i class="fas fa-fish text-blue-600 text-xl"></i>
+                                        </div>
+                                        <h4 class="font-bold text-gray-900 text-sm">Fisherman</h4>
+                                        <p class="text-xs text-gray-600 mt-1">Sell fresh fish</p>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                        <div>
+                            <input type="radio" id="role_customer" name="role" value="customer" class="peer sr-only" {% if form.role.value == 'customer' %}checked{% endif %}>
+                            <label for="role_customer" class="block cursor-pointer">
+                                <div class="p-4 border-2 border-gray-200 rounded-xl hover:border-teal-400 transition-all duration-200 peer-checked:border-teal-500 peer-checked:bg-teal-50">
+                                    <div class="text-center">
+                                        <div class="mx-auto h-12 w-12 bg-teal-100 rounded-full flex items-center justify-center mb-2">
+                                            <i class="fas fa-shopping-cart text-teal-600 text-xl"></i>
+                                        </div>
+                                        <h4 class="font-bold text-gray-900 text-sm">Customer</h4>
+                                        <p class="text-xs text-gray-600 mt-1">Buy fresh fish</p>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                        <div>
+                            <input type="radio" id="role_delivery" name="role" value="delivery" class="peer sr-only" {% if form.role.value == 'delivery' %}checked{% endif %}>
+                            <label for="role_delivery" class="block cursor-pointer">
+                                <div class="p-4 border-2 border-gray-200 rounded-xl hover:border-orange-400 transition-all duration-200 peer-checked:border-orange-500 peer-checked:bg-orange-50">
+                                    <div class="text-center">
+                                        <div class="mx-auto h-12 w-12 bg-orange-100 rounded-full flex items-center justify-center mb-2">
+                                            <i class="fas fa-truck text-orange-600 text-xl"></i>
+                                        </div>
+                                        <h4 class="font-bold text-gray-900 text-sm">Delivery Agent</h4>
+                                        <p class="text-xs text-gray-600 mt-1">Deliver orders</p>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    {% if form.role.errors %}
+                        <p class="text-sm text-red-600 mt-1">{{ form.role.errors|striptags }}</p>
+                    {% endif %}
+                </div>
+
                 <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white font-semibold py-3 px-4 rounded-xl transition-all">
                     <i class="fas fa-user-check mr-2"></i>Finish Setup
                 </button>

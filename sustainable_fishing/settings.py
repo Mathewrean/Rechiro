@@ -198,8 +198,12 @@ SOCIALACCOUNT_PROVIDERS = {
 }
 if ALLAUTH_INSTALLED:
     SOCIALACCOUNT_ADAPTER = "users.adapters.RechiroSocialAccountAdapter"
+    SOCIALACCOUNT_SIGNUP_FORM_CLASS = "users.adapters.RechiroSocialSignupForm"
 
 CSRF_FAILURE_VIEW = "users.views.csrf_failure_view"
+
+# For HTTPS behind ngrok/proxy
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
  
 # M-Pesa Daraja API Configuration
