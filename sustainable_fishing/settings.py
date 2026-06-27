@@ -205,6 +205,14 @@ CSRF_FAILURE_VIEW = "users.views.csrf_failure_view"
 # For HTTPS behind ngrok/proxy
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
+# Security hardening (enable for production via environment variables)
+SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=_parse_bool)
+SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=False, cast=_parse_bool)
+CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=_parse_bool)
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_BROWSER_XSS_FILTER = True
+X_FRAME_OPTIONS = 'DENY'
+
 # Email configuration
 EMAIL_BACKEND = config('EMAIL_BACKEND', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@rechiro.com')
