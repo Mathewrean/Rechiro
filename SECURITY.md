@@ -4,9 +4,27 @@
 
 Admin endpoint: `/admin/`
 
-### Superuser Credentials
-- Primary admin: `admin` / `admin123`
-- Additional staff accounts: `mathewrean`, `adminmathew`
+### Superuser Credentials (Production)
+
+Add to Railway environment variables to auto-create admin user on first deploy:
+```
+ADMIN_USERNAME=admin
+ADMIN_EMAIL=admin@rechiro.com
+ADMIN_PASSWORD=your-secure-password-here
+```
+
+The migration `0008_create_admin_user.py` creates the superuser automatically when migrations run.
+
+### Manual Admin Creation
+
+If auto-creation fails, create superuser via Railway console:
+```bash
+python manage.py shell -c "
+from django.contrib.auth import get_user_model
+User = get_user_model()
+User.objects.create_superuser('admin', 'admin@rechiro.com', 'your-password')
+"
+```
 
 ### Admin Security Hardening
 
@@ -22,12 +40,10 @@ CSRF_COOKIE_SECURE=True
 SECURE_HSTS_SECONDS=31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS=True
 SECURE_HSTS_PRELOAD=True
-
-# Custom admin URL (optional, reduces automated attacks)
-ADMIN_URL=admin/
 ```
 
 ### Allowed Hosts
+
 Ensure your `.env` includes all valid hosts:
 ```env
 ALLOWED_HOSTS=localhost,127.0.0.1,rechiro-production.up.railway.app,your-ngrok-url.ngrok-free.dev
