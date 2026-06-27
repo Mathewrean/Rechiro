@@ -1,11 +1,8 @@
-version: "2"
-authtoken: ""
-web_addr: "127.0.0.1:4040"
+version: "3"
 
 tunnels:
-  http:
-    addr: "8000"
-    proto: "http"
-    host_header: "rewrite"
-    domain: "albert-incult-superfluously.ngrok-free.dev"
+  kuppetsiaya:
+    proto: http
+    addr: 8000
+    hostname: albert-incult-superfluously.ngrok-free.dev
 
