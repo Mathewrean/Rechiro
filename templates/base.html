@@ -382,6 +382,20 @@
         </div>
     </nav>
 
+    <!-- Offline Cart Notification -->
+    <div id="offline-cart-banner" class="hidden fixed top-20 left-0 right-0 mx-4 bg-green-600 text-white px-6 py-4 rounded-xl shadow-lg z-50 flex items-center justify-between">
+        <div class="flex items-center">
+            <i class="fas fa-fish mr-3 text-xl"></i>
+            <div>
+                <p class="font-semibold">You are offline</p>
+                <p class="text-sm">We have saved your cart! Order will be placed when you reconnect.</p>
+            </div>
+        </div>
+        <button id="offline-banner-close" class="text-white hover:text-gray-200">
+            <i class="fas fa-times text-xl"></i>
+        </button>
+    </div>
+
     <!-- Email Verification Modal -->
     <div id="emailVerificationModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center">
         <div class="bg-white rounded-2xl shadow-lg max-w-md w-full mx-4 p-6 transform scale-95 opacity-0 transition-all duration-300">
@@ -525,6 +539,27 @@
         </div>
     </footer>
 
+
+    <script>
+        // Offline cart handling
+        window.addEventListener('offline', function() {
+            const banner = document.getElementById('offline-cart-banner');
+            if (banner) {
+                banner.classList.remove('hidden');
+                localStorage.setItem('offline_mode', 'true');
+            }
+        });
+        window.addEventListener('online', function() {
+            const banner = document.getElementById('offline-cart-banner');
+            if (banner) {
+                banner.classList.add('hidden');
+                localStorage.removeItem('offline_mode');
+            }
+        });
+        document.getElementById('offline-banner-close')?.addEventListener('click', function() {
+            document.getElementById('offline-cart-banner').classList.add('hidden');
+        });
+    </script>
 <script>
         window.USER_NEEDS_EMAIL_VERIFICATION = {% if user.is_authenticated and not user.email_verified %}true{% else %}false{% endif %};
         window.USER_EMAIL = '{{ user.email|escapejs }}';
