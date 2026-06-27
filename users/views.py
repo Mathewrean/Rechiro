@@ -66,12 +66,11 @@ def _send_email_verification_link(request, user):
             message=f'Hello {user.full_name or user.username}, verify your email: {verify_link}',
             from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@rechiro.com'),
             recipient_list=[user.email],
-            fail_silently=False,
+            fail_silently=True,
         )
     except Exception as e:
         logger = logging.getLogger(__name__)
         logger.error(f"Failed to send verification email to {user.email}: {e}")
-        raise
     return verify_link
 
 
@@ -581,9 +580,14 @@ def resend_email_verification_view(request):
         verify_link = _send_email_verification_link(request, user)
         if settings.DEBUG:
             messages.info(request, f'Email verification link (dev): {verify_link}')
-        messages.success(request, 'Verification email sent. Check your inbox.')
+        else:
+            messages.success(request, 'Verification email sent. Check your inbox.')
     except Exception:
-        messages.error(request, 'Failed to send verification email. Try again.')
+        if settings.DEBUG:
+            verify_link = _build_email_verification_link(request, user)
+            messages.info(request, f'Email verification link (dev): {verify_link}')
+        else:
+            messages.warning(request, 'Email could not be sent. Contact support.')
     return redirect('users:email_verification')
 
 
