@@ -205,13 +205,14 @@ CSRF_FAILURE_VIEW = "users.views.csrf_failure_view"
 # For HTTPS behind ngrok/proxy
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-# Email configuration
-EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend' if DEBUG else 'django.core.mail.backends.smtp.EmailBackend')
+# Email configuration - defaults to console for local development
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='')
+if not EMAIL_BACKEND:
+    if DEBUG:
+        EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    else:
+        EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@rechiro.com')
-
-# Console email for development, SMTP for production
-if DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # SMTP settings for production
 EMAIL_HOST = config('EMAIL_HOST', default='')

@@ -6,6 +6,7 @@ from django.http import JsonResponse
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 from django.core.mail import send_mail
 from django.conf import settings
+import logging
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.views.decorators.http import require_http_methods
@@ -59,13 +60,18 @@ def _build_email_verification_link(request, user):
 
 def _send_email_verification_link(request, user):
     verify_link = _build_email_verification_link(request, user)
-    send_mail(
-        subject='Verify your Rechiro account email',
-        message=f'Hello {user.full_name or user.username}, verify your email: {verify_link}',
-        from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@fishnet.local'),
-        recipient_list=[user.email],
-        fail_silently=True,
-    )
+    try:
+        send_mail(
+            subject='Verify your Rechiro account email',
+            message=f'Hello {user.full_name or user.username}, verify your email: {verify_link}',
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@rechiro.com'),
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.error(f"Failed to send verification email to {user.email}: {e}")
+        raise
     return verify_link
 
 
