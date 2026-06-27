@@ -1,4 +1,16 @@
 {% extends 'base.html' %}
+{% block extrahead %}
+{{ block.super }}
+<meta property="og:title" content="{{ fish.name }} - Fresh {{ fish.get_fish_type_display }} from Rechiro">
+<meta property="og:description" content="Buy {{ fish.available_weight }}kg at KES {{ fish.price_per_kg }}/kg">
+<meta property="og:type" content="product">
+<meta property="og:url" content="{{ request.build_absolute_uri }}">
+<meta property="og:image" content="{% if fish.has_image_file %}{{ request.scheme }}://{{ request.get_host }}{{ fish.image.url }}{% else %}https://rechiro-production.up.railway.app/static/branding/rechiro-512.png{% endif %}">
+<meta property="product:price:amount" content="{{ fish.price_per_kg }}">
+<meta property="product:price:currency" content="KES">
+<meta name="twitter:card" content="summary_large_image">
+{% endblock %}
+
 
 {% block title %}{{ fish.name }} - Fresh Fish{% endblock %}
 
