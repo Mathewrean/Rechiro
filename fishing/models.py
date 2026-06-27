@@ -62,6 +62,18 @@ class Fish(models.Model):
     def get_absolute_url(self):
         return reverse('fishing:fish_detail', kwargs={'fish_id': self.pk})
     
+    def get_og_metadata(self):
+        site_url = getattr(settings, 'SITE_URL', 'https://rechiro-production.up.railway.app')
+        image_url = f"{site_url}{self.image.url}" if self.image and self.has_image_file else f"{site_url}/static/branding/rechiro-512.png"
+        return {
+            'title': f"{self.name} - Fresh {self.get_fish_type_display()} from Rechiro",
+            'description': f"Buy {self.weight_kg}kg of fresh {self.get_fish_type_display()} at KES {self.price_per_kg}/kg. {self.description[:120] if self.description else 'Direct from Lake Victoria fishermen.'}",
+            'image': image_url,
+            'url': f"{site_url}{self.get_absolute_url()}",
+            'price_amount': float(self.price_per_kg),
+            'price_currency': 'KES'
+        }
+
     def get_total_value(self):
         """Calculate total value of available fish"""
         return self.available_weight * self.price_per_kg
