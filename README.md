@@ -68,7 +68,7 @@ MPESA_CONSUMER_KEY=your-consumer-key
 MPESA_CONSUMER_SECRET=your-consumer-secret
 MPESA_BUSINESS_SHORT_CODE=174379
 MPESA_PASSKEY=your-passkey
-MPESA_CALLBACK_URL=https://your-ngrok-url.ngrok-free.app/api/mpesa/callback/
+MPESA_CALLBACK_URL=https://your-ngrok-url.ngrok-free.dev/api/mpesa/callback/
 MPESA_BASE_URL=https://sandbox.safaricom.co.ke
 ```
 
