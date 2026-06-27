@@ -1,1 +1,1 @@
-# Management commands package
+default_app_config = 'users.apps.UsersConfig'
