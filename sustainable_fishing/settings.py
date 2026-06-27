@@ -206,6 +206,11 @@ CSRF_FAILURE_VIEW = "users.views.csrf_failure_view"
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Security hardening (enable for production via environment variables)
+# Admin configuration
+ADMIN_USERNAME = config("ADMIN_USERNAME", default="")
+ADMIN_EMAIL = config("ADMIN_EMAIL", default="")
+ADMIN_PASSWORD = config("ADMIN_PASSWORD", default="")
+
 SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=_parse_bool)
 SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=False, cast=_parse_bool)
 CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=_parse_bool)
