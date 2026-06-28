@@ -2,7 +2,7 @@ import json
 from decimal import Decimal
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
 
@@ -31,6 +31,7 @@ class CheckoutAndPaymentFlowTests(TestCase):
             phone='0712345678',
             email='buyer@example.com',
             email_verified=True,
+            phone_verified=True,
         )
         CustomerProfile.objects.create(
             user=self.customer,
@@ -68,6 +69,7 @@ class CheckoutAndPaymentFlowTests(TestCase):
             status='available',
         )
 
+    @override_settings(MPESA_CALLBACK_URL='https://example.com/callback')
     @patch('fishing.views.initiate_stk_push')
     def test_checkout_creates_pending_transaction_per_item(self, mock_stk):
         mock_stk.return_value = {
@@ -102,6 +104,32 @@ class CheckoutAndPaymentFlowTests(TestCase):
         _, kwargs = mock_stk.call_args
         self.assertIsNone(kwargs['business_shortcode'])
 
+    def test_checkout_requires_customer_phone_verification(self):
+        unverified_customer = User.objects.create_user(
+            username='unverified_buyer',
+            password='testpass123',
+            role='customer',
+            phone='0722334455',
+            email='unverified@example.com',
+            email_verified=True,
+            phone_verified=False,
+        )
+        CustomerProfile.objects.create(
+            user=unverified_customer,
+            phone='0722334455',
+            delivery_location='Nairobi',
+            preferred_fulfillment='delivery',
+        )
+        self.client.login(username='unverified_buyer', password='testpass123')
+        cart = Cart.objects.create(user=unverified_customer)
+        CartItem.objects.create(cart=cart, fish=self.fish, weight_kg=Decimal('1.00'))
+        response = self.client.post(reverse('fishing:checkout_process'), {
+            'fulfillment_method': 'delivery',
+            'delivery_location': 'Nairobi CBD',
+        })
+        self.assertIn(response.status_code, [301, 302])
+
+    @override_settings(MPESA_CALLBACK_URL='https://example.com/callback')
     @patch('fishing.views.initiate_stk_push')
     def test_checkout_allows_unverified_fisherman_when_mpesa_config_is_complete(self, mock_stk):
         profile = self.fisherman.fisherman_profile
@@ -150,6 +178,7 @@ class CheckoutAndPaymentFlowTests(TestCase):
         _, kwargs = mock_stk.call_args
         self.assertEqual(kwargs['transaction_type'], 'CustomerPayBillOnline')
 
+    @override_settings(MPESA_CALLBACK_URL='https://example.com/callback')
     @patch('fishing.views.MpesaService')
     @patch('fishing.views.initiate_stk_push')
     def test_callback_success_marks_fully_paid_and_delivery_in_progress(self, mock_stk, mock_mpesa):

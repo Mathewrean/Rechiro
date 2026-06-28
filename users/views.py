@@ -626,8 +626,8 @@ def phone_verification_view(request):
 @require_http_methods(['POST'])
 def resend_phone_verification_view(request):
     user = request.user
-    if user.role != 'fisherman':
-        messages.error(request, 'Phone ownership verification is only required for fishermen.')
+    if user.role not in ['fisherman', 'customer']:
+        messages.error(request, 'Phone verification is only required for fishermen and customers.')
         return redirect('users:profile')
     if user.phone_verified:
         messages.info(request, 'Your phone is already verified.')
