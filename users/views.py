@@ -559,6 +559,9 @@ def verify_email_view(request, token):
         user.email_verified = True
         user.save(update_fields=['email_verified'])
         messages.success(request, 'Email verified successfully. You can now purchase with confidence.')
+        # Refresh session user if currently logged in
+        if request.user.is_authenticated and request.user.pk == user.pk:
+            request.user.refresh_from_db()
     except (BadSignature, SignatureExpired, User.DoesNotExist):
         messages.error(request, 'Invalid or expired verification link.')
     if request.user.is_authenticated:

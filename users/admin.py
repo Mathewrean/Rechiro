@@ -15,8 +15,8 @@ class UserAdmin(BaseUserAdmin):
         ('Personal Info', {'fields': ('full_name', 'email', 'email_verified', 'phone', 'phone_verified', 'profile_picture')}),
         ('Role & Status', {'fields': ('role', 'is_active', 'is_staff', 'is_superuser')}),
         ('Location', {'fields': ('location',)}),
-        ('Dates', {'fields': ('created_at', 'updated_at')}),
     )
+    readonly_fields = ()
     
     add_fieldsets = (
         ('Create Account', {
@@ -24,6 +24,10 @@ class UserAdmin(BaseUserAdmin):
             'fields': ('username', 'email', 'password1', 'password2', 'role'),
         }),
     )
+    
+    def save_model(self, request, obj, form, change):
+        """Ensure email_verified and phone_verified are saved properly."""
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(FishermanProfile)
