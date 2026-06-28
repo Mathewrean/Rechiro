@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Contact Us - Rechiro{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-12">
+    <div class="container mx-auto px-4 max-w-2xl">
+        <div class="bg-white rounded-2xl shadow-lg p-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Contact Support</h1>
+            <p class="text-gray-600 mb-6">We'll respond within 24-48 hours</p>
+
+            <form method="post" enctype="multipart/form-data" class="space-y-6 form-panel">
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                <div class="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                    {{ form.non_field_errors.0 }}
+                </div>
+                {% endif %}
+
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.name.id_for_label }}" class="block mb-2 text-sm font-semibold text-gray-700">Name *</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}<p class="text-red-600 text-xs mt-1">{{ form.name.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form.email.id_for_label }}" class="block mb-2 text-sm font-semibold text-gray-700">Email *</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}<p class="text-red-600 text-xs mt-1">{{ form.email.errors.0 }}</p>{% endif %}
+                    </div>
+                </div>
+
+                <div>
+                    <label for="{{ form.phone.id_for_label }}" class="block mb-2 text-sm font-semibold text-gray-700">Phone (optional)</label>
+                    {{ form.phone }}
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="{{ form.role.id_for_label }}" class="block mb-2 text-sm font-semibold text-gray-700">Role *</label>
+                        {{ form.role }}
+                    </div>
+                    <div>
+                        <label for="{{ form.category.id_for_label }}" class="block mb-2 text-sm font-semibold text-gray-700">Category *</label>
+                        {{ form.category }}
+                    </div>
+                </div>
+
+                <div>
+                    <label for="{{ form.subject.id_for_label }}" class="block mb-2 text-sm font-semibold text-gray-700">Subject *</label>
+                    {{ form.subject }}
+                    {% if form.subject.errors %}<p class="text-red-600 text-xs mt-1">{{ form.subject.errors.0 }}</p>{% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.message.id_for_label }}" class="block mb-2 text-sm font-semibold text-gray-700">Message *</label>
+                    {{ form.message }}
+                    {% if form.message.errors %}<p class="text-red-600 text-xs mt-1">{{ form.message.errors.0 }}</p>{% endif %}
+                </div>
+
+                <div>
+                    <label for="{{ form.attachment.id_for_label }}" class="block mb-2 text-sm font-semibold text-gray-700">Attachment (optional, max 5MB)</label>
+                    {{ form.attachment }}
+                    {% if form.attachment.errors %}<p class="text-red-600 text-xs mt-1">{{ form.attachment.errors.0 }}</p>{% endif %}
+                </div>
+
+                <div class="flex items-start">
+                    {{ form.agreement }}
+                    <label for="{{ form.agreement.id_for_label }}" class="ml-2 text-sm text-gray-600">
+                        I understand support will respond within 24-48 hours.
+                    </label>
+                </div>
+
+                <button type="submit" class="w-full bg-primary hover:bg-secondary text-white font-semibold py-3 rounded-lg transition-colors">
+                    <i class="fas fa-paper-plane mr-2"></i>Send Message
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% include "fishing/partials/whatsapp_button.html" %}
+{% endblock %}

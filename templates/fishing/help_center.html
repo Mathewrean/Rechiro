@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Help Center - Rechiro{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-12">
+    <div class="container mx-auto px-4 max-w-5xl">
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">Rechiro Help Center</h1>
+            <p class="text-gray-600">Find answers and get support for all Rechiro features</p>
+        </div>
+
+        <div class="mb-8">
+            <input type="text" placeholder="Search help articles..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+        </div>
+
+        <!-- Featured Articles -->
+        {% if featured_articles %}
+        <div class="mb-12">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Featured Articles</h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for article in featured_articles %}
+                <div class="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow">
+                    <h3 class="font-bold text-gray-800 mb-2">{{ article.title }}</h3>
+                    <p class="text-sm text-gray-500 mb-3">Read time: {{ article.reading_time }} min</p>
+                    <p class="text-gray-600 text-sm mb-4">{{ article.content|striptags|truncatechars:100 }}</p>
+                    <a href="#" class="text-primary font-medium text-sm hover:underline">Read more →</a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Categories -->
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Browse by Category</h2>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for cat in categories %}
+                <a href="#" class="bg-white rounded-lg shadow-sm p-6 text-center hover:shadow-md transition-shadow block">
+                    <i class="fas fa-shopping-cart text-3xl text-primary mb-3"></i>
+                    <h3 class="font-bold text-gray-800">{{ cat.category|title }}</h3>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="mt-12 text-center">
+            <p class="text-gray-600 mb-4">Still need help?</p>
+            <a href="{% url 'fishing:contact' %}" class="bg-primary hover:bg-secondary text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                Contact Support
+            </a>
+        </div>
+    </div>
+</div>
+
+{% include "fishing/partials/whatsapp_button.html" %}
+{% endblock %}

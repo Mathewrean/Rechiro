@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .models import (
+    ContactMessage, FAQCategory, FAQ, HelpArticle,
     Fish, Cart, CartItem, Order, OrderItem, PaymentTransaction, Delivery,
     FishTransactionLog, PickupPoint, DeliveryAuditLog, SellerNotification, PlatformFeeLog, ChairmanApprovalRequest,
     UserNotification
@@ -123,3 +124,36 @@ class ChairmanApprovalRequestAdmin(admin.ModelAdmin):
     list_display = ('fisherman', 'status', 'reviewed_by', 'requested_at', 'reviewed_at')
     list_filter = ('status', 'requested_at', 'reviewed_at')
     search_fields = ('fisherman__username', 'reviewed_by__username', 'notes')
+
+
+# Support Admin
+@admin.register(ContactMessage)
+class ContactMessageAdmin(admin.ModelAdmin):
+    list_display = ('name', 'email', 'category', 'status', 'priority', 'created_at')
+    list_filter = ('status', 'category', 'priority', 'role', 'created_at')
+    search_fields = ('name', 'email', 'subject', 'message')
+    readonly_fields = ('internal_notes',)
+    ordering = ('-created_at',)
+
+
+@admin.register(FAQCategory)
+class FAQCategoryAdmin(admin.ModelAdmin):
+    list_display = ('title', 'slug', 'order', 'active')
+    prepopulated_fields = {'slug': ('title',)}
+    ordering = ('order', 'title')
+
+
+@admin.register(FAQ)
+class FAQAdmin(admin.ModelAdmin):
+    list_display = ('question', 'category', 'views', 'helpful_count', 'unhelpful_count', 'active')
+    list_filter = ('category', 'active')
+    search_fields = ('question', 'answer')
+    ordering = ('category', 'order')
+
+
+@admin.register(HelpArticle)
+class HelpArticleAdmin(admin.ModelAdmin):
+    list_display = ('title', 'category', 'featured', 'reading_time', 'views', 'created_at')
+    list_filter = ('category', 'featured', 'created_at')
+    search_fields = ('title', 'content')
+    prepopulated_fields = {'slug': ('title',)}

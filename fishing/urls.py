@@ -56,6 +56,11 @@ urlpatterns = [
     path('api/cart/add/<int:fish_id>/', views.api_add_to_cart, name='api_add_to_cart'),
     path('api/cart/count/', views.api_cart_count, name='api_cart_count'),
     
+    # Support
+    path('support/contact/', views.contact_view, name='contact'),
+    path('support/faqs/', views.faqs_view, name='faqs'),
+    path('support/help/', views.help_center_view, name='help_center'),
+
     # Home
     path('home/', views.marketplace_home, name='home'),
 ]

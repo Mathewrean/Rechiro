@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}FAQs - Rechiro{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-12">
+    <div class="container mx-auto px-4 max-w-4xl">
+        <h1 class="text-3xl font-bold text-gray-900 mb-8">Frequently Asked Questions</h1>
+
+        <div class="mb-8">
+            <input type="text" id="faq-search" placeholder="Search FAQs..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+        </div>
+
+        <div class="space-y-8">
+            {% for category in categories %}
+            <div class="faq-category" data-category="{{ category.slug }}">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 pb-2 border-b">{{ category.title }}</h2>
+                <div class="space-y-2">
+                    {% for faq in category.faqs.all %}
+                    <div class="faq-item bg-white rounded-lg shadow-sm">
+                        <button class="w-full text-left p-4 font-semibold text-gray-800 faq-question" data-faq-id="{{ faq.id }}">
+                            {{ faq.question }}
+                        </button>
+                        <div class="faq-answer hidden p-4 pt-0 text-gray-600 border-t">
+                            {{ faq.answer|safe }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="mt-12 text-center">
+            <p class="text-gray-600 mb-4">Didn't find an answer?</p>
+            <a href="{% url 'fishing:contact' %}" class="bg-primary hover:bg-secondary text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                Contact Us
+            </a>
+        </div>
+    </div>
+</div>
+
+{% include "fishing/partials/whatsapp_button.html" %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.faq-question').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const answer = this.nextElementSibling;
+            answer.classList.toggle('hidden');
+            this.classList.toggle('text-primary');
+        });
+    });
+    
+    document.getElementById('faq-search').addEventListener('input', function() {
+        const search = this.value.toLowerCase();
+        document.querySelectorAll('.faq-item').forEach(item => {
+            const question = item.querySelector('.faq-question').textContent.toLowerCase();
+            item.closest('.faq-category').classList.toggle('hidden', !question.includes(search));
+        });
+    });
+});
+</script>
+{% endblock %}

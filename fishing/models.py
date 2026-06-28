@@ -495,3 +495,136 @@ class PlatformFeeLog(models.Model):
     class Meta:
         ordering = ['-logged_at']
         unique_together = ('payment_transaction', 'order')
+
+
+class ContactMessage(models.Model):
+    ROLE_CHOICES = [
+        ('customer', 'Customer'),
+        ('fisherman', 'Fisherman'),
+        ('delivery_agent', 'Delivery Agent'),
+    ]
+    CATEGORY_CHOICES = [
+        ('billing', 'Billing Issue'),
+        ('orders', 'Order Problem'),
+        ('delivery', 'Delivery Issue'),
+        ('account', 'Account Support'),
+        ('other', 'Other'),
+    ]
+    STATUS_CHOICES = [
+        ('new', 'New'),
+        ('in_progress', 'In Progress'),
+        ('resolved', 'Resolved'),
+        ('closed', 'Closed'),
+    ]
+    PRIORITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+    ]
+
+    name = models.CharField(max_length=100)
+    email = models.EmailField()
+    phone = models.CharField(max_length=20, blank=True)
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    subject = models.CharField(max_length=200)
+    message = models.TextField()
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    attachment = models.FileField(upload_to='support_attachments/', blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    internal_notes = models.TextField(blank=True)
+    resolved_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Contact Message'
+        verbose_name_plural = 'Contact Messages'
+
+    def __str__(self):
+        return f"{self.name} - {self.subject}"
+
+
+class FAQCategory(models.Model):
+    ICON_CHOICES = [
+        ('cart', 'Cart'),
+        ('fish', 'Fish'),
+        ('money', 'Money'),
+        ('truck', 'Truck'),
+        ('user', 'User'),
+    ]
+
+    title = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True)
+    description = models.CharField(max_length=200, blank=True)
+    icon = models.CharField(max_length=20, choices=ICON_CHOICES, blank=True)
+    order = models.IntegerField(default=0)
+    active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['order', 'title']
+        verbose_name = 'FAQ Category'
+        verbose_name_plural = 'FAQ Categories'
+
+    def __str__(self):
+        return self.title
+
+
+class FAQ(models.Model):
+    category = models.ForeignKey(FAQCategory, on_delete=models.CASCADE, related_name='faqs')
+    question = models.CharField(max_length=300)
+    answer = models.TextField(help_text='HTML allowed')
+    helpful_count = models.IntegerField(default=0)
+    unhelpful_count = models.IntegerField(default=0)
+    views = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    active = models.BooleanField(default=True)
+    order = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['order', 'question']
+        verbose_name = 'FAQ'
+        verbose_name_plural = 'FAQs'
+
+    def __str__(self):
+        return self.question
+
+
+class HelpArticle(models.Model):
+    CATEGORY_CHOICES = [
+        ('getting_started', 'Getting Started'),
+        ('account', 'Account'),
+        ('buying', 'Buying'),
+        ('selling', 'Selling'),
+        ('payments', 'Payments'),
+        ('delivery', 'Delivery'),
+        ('troubleshooting', 'Troubleshooting'),
+    ]
+
+    title = models.CharField(max_length=200)
+    slug = models.SlugField(unique=True)
+    content = models.TextField(help_text='HTML allowed')
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    featured = models.BooleanField(default=False)
+    views = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    reading_time = models.IntegerField(default=0)
+    author = models.CharField(max_length=100, default='Rechiro Support')
+    image = models.ImageField(upload_to='help_articles/', blank=True, null=True)
+
+    class Meta:
+        ordering = ['-featured', 'category', 'created_at']
+        verbose_name = 'Help Article'
+        verbose_name_plural = 'Help Articles'
+
+    def __str__(self):
+        return self.title
+
+    def save(self, *args, **kwargs):
+        if self.content:
+            word_count = len(self.content.split())
+            self.reading_time = max(1, int(word_count / 200))
+        super().save(*args, **kwargs)

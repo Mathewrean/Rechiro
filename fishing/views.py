@@ -1808,3 +1808,56 @@ def marketplace_home(request):
         'featured_fish': featured_fish,
     }
     return render(request, 'fishing/marketplace_home.html', context)
+
+
+# Support Views
+from .forms import ContactForm
+from .models import ContactMessage, FAQCategory, FAQ, HelpArticle
+
+
+def contact_view(request):
+    """Contact us form view"""
+    if request.method == 'POST':
+        form = ContactForm(request.POST, request.FILES)
+        if form.is_valid():
+            contact = ContactMessage.objects.create(
+                name=form.cleaned_data['name'],
+                email=form.cleaned_data['email'],
+                phone=form.cleaned_data['phone'],
+                role=form.cleaned_data['role'],
+                category=form.cleaned_data['category'],
+                subject=form.cleaned_data['subject'],
+                message=form.cleaned_data['message'],
+                attachment=form.cleaned_data['attachment'],
+            )
+            messages.success(request, f'Thank you! Your reference ID is #{contact.id}. We will respond within 24-48 hours.')
+            return redirect('fishing:contact')
+    else:
+        form = ContactForm()
+    
+    context = {'form': form}
+    return render(request, 'fishing/contact.html', context)
+
+
+def faqs_view(request):
+    """FAQs page view"""
+    categories = FAQCategory.objects.filter(active=True).prefetch_related('faqs')
+    faqs = FAQ.objects.filter(active=True).select_related('category')
+    
+    context = {
+        'categories': categories,
+        'faqs': faqs,
+    }
+    return render(request, 'fishing/faqs.html', context)
+
+
+def help_center_view(request):
+    """Help center page view"""
+    featured_articles = HelpArticle.objects.filter(featured=True, active=True)[:4]
+    categories = HelpArticle.objects.filter(active=True).values('category').distinct()
+    
+    context = {
+        'featured_articles': featured_articles,
+        'categories': categories,
+    }
+    return render(request, 'fishing/help_center.html', context)
