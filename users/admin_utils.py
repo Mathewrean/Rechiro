@@ -5,7 +5,7 @@ from fishing.models import Cart
 
 def cart_context(request):
     """Add cart information to all templates"""
-    if request.user.is_authenticated:
+    if hasattr(request, 'user') and request.user.is_authenticated:
         try:
             cart = Cart.objects.get(user=request.user)
             cart_count = cart.get_total_items()
@@ -25,7 +25,7 @@ def cart_context(request):
 
 def admin_statistics_context(request):
     """Add admin statistics to templates"""
-    if request.user.is_authenticated and request.user.is_staff:
+    if hasattr(request, 'user') and request.user.is_authenticated and request.user.is_staff:
         from users.models import User
         from fishing.models import Fish, Order
         
@@ -39,4 +39,3 @@ def admin_statistics_context(request):
             }
         }
     return {}
-
