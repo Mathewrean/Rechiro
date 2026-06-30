@@ -1,23 +1,20 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, authenticate, logout
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.http import JsonResponse
-from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
-from django.core.mail import send_mail
-from django.conf import settings
-import logging
-from django.core.paginator import Paginator
-from django.db.models import Q
-from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
-from django.views import View
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.urls import reverse_lazy
-from django.views.generic import UpdateView, DetailView, ListView
 from decimal import Decimal
-import importlib.util
+
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.auth import login, logout
+from django.contrib.auth.decorators import login_required
+from django.core.mail import send_mail
+from django.core.paginator import Paginator
+from django.http import JsonResponse
+from django.shortcuts import redirect, render, get_object_or_404
+from django.urls import reverse_lazy
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import UpdateView
+from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
+import logging
 
 from .models import User, FishermanProfile, CustomerProfile, BeachChairmanProfile, PhoneVerificationTransaction
 from .forms import (
@@ -74,18 +71,6 @@ def _send_email_verification_link(request, user):
     return verify_link
 
 
-def _get_content_models():
-    if "content" not in settings.INSTALLED_APPS:
-        return None
-    if importlib.util.find_spec("content") is None:
-        return None
-    try:
-        from content.models import TimelinePost, EducationalContent
-    except Exception:
-        return None
-    return TimelinePost, EducationalContent
-
-
 def _initiate_phone_verification_stk(user):
     from fishing.mpesa_service import initiate_stk_push
     verification_ref = f"PHONE-VERIFY-{user.id}"
@@ -117,7 +102,6 @@ def csrf_failure_view(request, reason=""):
 
 
 def register_view(request):
-    """Handle user registration"""
     if request.user.is_authenticated:
         return redirect('users:profile')
     
@@ -276,26 +260,13 @@ def logout_view(request):
 
 @login_required
 def profile_view(request):
-    """Display user profile"""
     user = request.user
-    content_models = _get_content_models()
-    total_posts = None
-    total_educational = None
-    recent_posts = None
-    educational_content = None
-    if content_models:
-        TimelinePost, EducationalContent = content_models
-        total_posts = TimelinePost.objects.filter(author=user).count()
-        total_educational = EducationalContent.objects.filter(author=user).count()
-        recent_posts = TimelinePost.objects.filter(author=user).order_by('-created_at')[:5]
-        educational_content = EducationalContent.objects.filter(author=user).order_by('-created_at')[:5]
-    
+
     email_verify_link = ''
     if not user.email_verified and settings.DEBUG and user.email:
         email_verify_link = _build_email_verification_link(request, user)
 
     if user.role == 'fisherman':
-        # Get fisherman stats
         profile = user.get_fisherman_profile()
         fish_listings = Fish.objects.filter(fisherman=user)
         recent_catches = fish_listings.order_by('-created_at')[:5]
@@ -309,15 +280,10 @@ def profile_view(request):
             'total_sales': total_sales,
             'total_catches': total_catches,
             'recent_catches': recent_catches,
-            'total_posts': total_posts,
-            'recent_posts': recent_posts,
-            'total_educational': total_educational,
-            'educational_content': educational_content,
             'email_verify_link': email_verify_link,
             'title': f'{user.full_name or user.username} - Profile'
         }
     else:
-        # Get customer stats
         profile = user.get_customer_profile()
         orders = Order.objects.filter(customer=user)
         total_orders = orders.count()
@@ -328,16 +294,10 @@ def profile_view(request):
             'orders': orders[:5],
             'total_orders': total_orders,
             'completed_orders': completed_orders,
-            'total_catches': None,
-            'recent_catches': None,
-            'total_posts': total_posts,
-            'recent_posts': recent_posts,
-            'total_educational': total_educational,
-            'educational_content': educational_content,
             'email_verify_link': email_verify_link,
             'title': f'{user.full_name or user.username} - Profile'
         }
-    
+
     return render(request, 'users/profile.html', context)
 
 
