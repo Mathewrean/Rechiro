@@ -13,16 +13,17 @@ from decimal import Decimal
 import json
 import logging
 from urllib.parse import urlparse
+from collections import defaultdict
 
 from .models import (
     Fish, Cart, CartItem, Order, OrderItem, PaymentTransaction, Delivery, FishTransactionLog,
     PickupPoint, DeliveryAuditLog, SellerNotification, PlatformFeeLog, ChairmanApprovalRequest,
-    UserNotification
+    UserNotification, ContactMessage, FAQCategory, FAQ, HelpArticle
 )
 from .mpesa_service import MpesaService, initiate_stk_push, process_payment_callback
+from .forms import ContactForm
 from users.models import FishermanProfile, CustomerProfile, User
 from users.models import PhoneVerificationTransaction, BeachChairmanProfile
-from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -1814,13 +1815,7 @@ def marketplace_home(request):
     return render(request, 'fishing/marketplace_home.html', context)
 
 
-# Support Views
-from .forms import ContactForm
-from .models import ContactMessage, FAQCategory, FAQ, HelpArticle
-
-
 def contact_view(request):
-    """Contact us form view"""
     if request.method == 'POST':
         form = ContactForm(request.POST, request.FILES)
         if form.is_valid():
