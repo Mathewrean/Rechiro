@@ -1,16 +1,15 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
-from datetime import datetime, timedelta
+from datetime import timedelta
 import random
 from decimal import Decimal
 
 from users.models import User
-from fishing.models import Catch
+from fishing.models import Fish
 
 
 def setup_google_oauth():
-    """Configure Google OAuth in the database."""
     from django.conf import settings
     if not getattr(settings, 'ALLAUTH_INSTALLED', False):
         return
@@ -36,17 +35,6 @@ def setup_google_oauth():
         pass
 
 
-def _get_content_models():
-    """Get content models if the content app is installed."""
-    if "content" not in settings.INSTALLED_APPS:
-        return None
-    try:
-        from content.models import TimelinePost, EducationalContent, PostLike
-        return TimelinePost, EducationalContent, PostLike
-    except Exception:
-        return None
-
-
 class Command(BaseCommand):
     help = 'Setup sample data for the Sustainable Fishing platform'
 
@@ -61,19 +49,7 @@ class Command(BaseCommand):
             '--catches',
             type=int,
             default=50,
-            help='Number of catch records to create',
-        )
-        parser.add_argument(
-            '--posts',
-            type=int,
-            default=30,
-            help='Number of timeline posts to create',
-        )
-        parser.add_argument(
-            '--educational',
-            type=int,
-            default=15,
-            help='Number of educational content items to create',
+            help='Number of fish listings to create',
         )
 
     def handle(self, *args, **options):
@@ -153,37 +129,29 @@ class Command(BaseCommand):
                 self.stdout.write(f'Created customer: {name}')
 
     def create_catches(self, count):
-        """Create sample catch records"""
         fish_types = [
-            'Tuna', 'Salmon', 'Cod', 'Mackerel', 'Sardine', 'Anchovy',
-            'Bass', 'Snapper', 'Grouper', 'Mahi-mahi', 'Halibut', 'Flounder',
-            'Shrimp', 'Lobster', 'Crab', 'Squid'
+            'tilapia', 'nile_perch', 'catfish', 'omena', 'lungfish', 'mudfish', 'barbel', 'other'
         ]
-        
+
         locations = [
-            'Deep Sea Area A', 'Coastal Zone B', 'Reef Region C', 'Open Ocean D',
-            'Fishing Ground E', 'Marine Protected Area F', 'Traditional Spot G'
+            'Lake Victoria', 'Mombasa Coast', 'Lake Turkana', 'Ruma River',
+            'Goda River', 'Yala River', 'Lake Naivasha', 'Rift Valley'
         ]
-        
-        statuses = ['sold', 'unsold', 'donated']
-        
+
+        statuses = ['available', 'reserved', 'sold']
+
         fishermen = User.objects.filter(role='fisherman')
-        
+
         for i in range(count):
-            catch = Catch.objects.create(
-                fisher=random.choice(fishermen),
+            fish = Fish.objects.create(
+                fisherman=random.choice(fishermen),
+                name=f"{random.choice(fish_types).replace('_', ' ').title()}",
                 fish_type=random.choice(fish_types),
-                weight=Decimal(str(random.uniform(0.5, 50.0))),
+                available_weight=Decimal(str(random.uniform(0.5, 50.0))),
                 location=random.choice(locations),
                 catch_date=timezone.now().date() - timedelta(days=random.randint(1, 90)),
                 status=random.choice(statuses),
-                price=Decimal(str(random.uniform(10.0, 500.0))) if random.choice([True, False]) else None,
-                notes=f'Good quality {random.choice(fish_types).lower()} caught in {random.choice(locations)}',
-                created_at=timezone.now() - timedelta(days=random.randint(1, 90))
+                price_per_kg=Decimal(str(random.uniform(100.0, 1000.0))),
             )
-            
-self.stdout.write(f'Created {count} catch records')
 
-
-if __name__ == '__main__':
-    pass
+        self.stdout.write(f'Created {count} fish listings')
