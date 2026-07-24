@@ -1,0 +1,1 @@
+web: gunicorn sustainable_fishing.wsgi:application
