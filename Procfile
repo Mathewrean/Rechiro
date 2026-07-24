@@ -1,1 +1,1 @@
-web: gunicorn sustainable_fishing.wsgi:application
+web: gunicorn rechiro.wsgi:application
