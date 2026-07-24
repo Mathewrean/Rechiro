@@ -15,7 +15,3 @@ services:
         value: "https://rechiro.onrender.com/api/mpesa/callback/"
       - key: EMAIL_BACKEND
         value: "django.core.mail.backends.smtp.EmailBackend"
-
-databases:
-  - name: rechiro-db
-    plan: free
