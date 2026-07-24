@@ -18,7 +18,7 @@ except Exception:
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-SECRET_KEY = config('SECRET_KEY', default="django-insecure-ki)+%eng&-v5u$z%5_7^=o#gm3i(muw2$_8t)_)$uht=$i8nmp")
+SECRET_KEY = config('SECRET_KEY', default=os.environ.get('SECRET_KEY', 'django-insecure-change-in-production'))
 
 def _parse_bool(value):
     if value is None:
@@ -35,6 +35,8 @@ def _parse_bool(value):
 DEBUG = config('DEBUG', default=False, cast=_parse_bool)
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default="*").split(',')
+if "*" not in ALLOWED_HOSTS and not DEBUG:
+    ALLOWED_HOSTS.append("*.onrender.com")
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:8000",
     "http://127.0.0.1:8000",
@@ -42,6 +44,8 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.1:8000",
     "https://albert-incult-superfluously.ngrok-free.dev",
     "https://rechiro-production.up.railway.app",
+    "https://*.onrender.com",
+    "https://rechiro.onrender.com",
 ]
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8000",
@@ -53,6 +57,8 @@ CORS_ALLOWED_ORIGINS = [
     "https://*.ngrok-free.dev",
     "https://*.ngrok.app",
     "https://albert-incult-superfluously.ngrok-free.dev",
+    "https://*.onrender.com",
+    "https://rechiro.onrender.com",
 ]
 
 
@@ -117,9 +123,16 @@ WSGI_APPLICATION = "rechiro.wsgi.application"
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': str(BASE_DIR / 'db.sqlite3'),
     }
 }
+
+# For Render, ensure database directory is writable
+try:
+    db_path = Path(DATABASES['default']['NAME']).parent
+    db_path.mkdir(parents=True, exist_ok=True)
+except Exception:
+    pass
 
 # Override database configuration if DATABASE_URL is provided (for production)
 if 'DATABASE_URL' in os.environ:
@@ -156,18 +169,17 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
-STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+STATIC_ROOT = str(BASE_DIR / "staticfiles")
 if importlib.util.find_spec("whitenoise") is not None:
     manifest_path = BASE_DIR / "staticfiles" / "staticfiles.json"
     if manifest_path.exists():
         STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
     else:
         STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
-    # Serve assets from STATICFILES_DIRS without requiring collectstatic.
     WHITENOISE_USE_FINDERS = True
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = str(BASE_DIR / 'media')
 
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -202,7 +214,8 @@ if ALLAUTH_INSTALLED:
 
 CSRF_FAILURE_VIEW = "users.views.csrf_failure_view"
 
-# For HTTPS behind ngrok/proxy
+SITE_URL = config('SITE_URL', default='https://rechiro.onrender.com')
+
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Security hardening (enable for production via environment variables)
@@ -233,11 +246,11 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 # Get these from Safaricom Developer Portal
 # Consumer Key: FcbgCgnnIxIEY9fFWRl9PFXB15xgPqEUl9AIa3mIbGgPbTOg
 # Consumer Secret: e8M2xIKQo7ppCF3rKJdcR4XxYYw04LJa7HlVm8IDXmo8pPxzPoRp4jQcg2WiJxe8
-MPESA_CONSUMER_KEY = config('MPESA_CONSUMER_KEY')
-MPESA_CONSUMER_SECRET = config('MPESA_CONSUMER_SECRET')
-MPESA_BUSINESS_SHORT_CODE = config('MPESA_BUSINESS_SHORT_CODE')
-MPESA_PASSKEY = config('MPESA_PASSKEY')
-MPESA_CALLBACK_URL = config('MPESA_CALLBACK_URL')
+MPESA_CONSUMER_KEY = config('MPESA_CONSUMER_KEY', default='')
+MPESA_CONSUMER_SECRET = config('MPESA_CONSUMER_SECRET', default='')
+MPESA_BUSINESS_SHORT_CODE = config('MPESA_BUSINESS_SHORT_CODE', default='')
+MPESA_PASSKEY = config('MPESA_PASSKEY', default='')
+MPESA_CALLBACK_URL = config('MPESA_CALLBACK_URL', default='')
 MPESA_BASE_URL = config('MPESA_BASE_URL', default='https://sandbox.safaricom.co.ke')
 
 # For B2C payments (refunds)
@@ -285,17 +298,33 @@ LOGGING = {
 }
 
 
-# Create logs directory if it doesn't exist
-os.makedirs(BASE_DIR / 'logs', exist_ok=True)
+# Create logs directory if it doesn't exist (skip during build/static collection)
+try:
+    os.makedirs(BASE_DIR / 'logs', exist_ok=True)
+except (OSError, PermissionError):
+    pass
+
+# Create media directory if it doesn't exist
+try:
+    os.makedirs(BASE_DIR / 'media', exist_ok=True)
+except (OSError, PermissionError):
+    pass
+
+# Ensure staticfiles directory exists
+try:
+    os.makedirs(BASE_DIR / 'staticfiles', exist_ok=True)
+except (OSError, PermissionError):
+    pass
 
 # Security Settings for Production
 if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000  # 1 year
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
-    SECURE_SSL_REDIRECT = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
+    # SECURE_SSL_REDIRECT disabled - Render handles SSL termination
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'

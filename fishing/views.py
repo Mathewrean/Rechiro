@@ -66,10 +66,14 @@ def _is_public_callback_url(url_value):
 
 def fish_marketplace(request):
     """Display all available fish in Amazon-style grid layout"""
-    fish_list = Fish.objects.filter(
-        status='available',
-        available_weight__gt=0
-    ).select_related('fisherman').order_by('-created_at')
+    fish_list = Fish.objects.none()
+    try:
+        fish_list = Fish.objects.filter(
+            status='available',
+            available_weight__gt=0
+        ).select_related('fisherman').order_by('-created_at')
+    except Exception:
+        fish_list = Fish.objects.none()
     
     # Filters
     fish_type_filter = request.GET.get('fish_type')
@@ -78,37 +82,60 @@ def fish_marketplace(request):
     sort_by = request.GET.get('sort', '-created_at')
     
     if fish_type_filter:
-        fish_list = fish_list.filter(fish_type__icontains=fish_type_filter)
+        try:
+            fish_list = fish_list.filter(fish_type__icontains=fish_type_filter)
+        except Exception:
+            pass
     
     if min_price:
-        fish_list = fish_list.filter(price_per_kg__gte=min_price)
+        try:
+            fish_list = fish_list.filter(price_per_kg__gte=min_price)
+        except Exception:
+            pass
     
     if max_price:
-        fish_list = fish_list.filter(price_per_kg__lte=max_price)
+        try:
+            fish_list = fish_list.filter(price_per_kg__lte=max_price)
+        except Exception:
+            pass
     
     # Sort
-    if sort_by == 'price_low':
-        fish_list = fish_list.order_by('price_per_kg')
-    elif sort_by == 'price_high':
-        fish_list = fish_list.order_by('-price_per_kg')
-    elif sort_by == 'weight':
-        fish_list = fish_list.order_by('-available_weight')
-    else:
-        fish_list = fish_list.order_by('-created_at')
+    try:
+        if sort_by == 'price_low':
+            fish_list = fish_list.order_by('price_per_kg')
+        elif sort_by == 'price_high':
+            fish_list = fish_list.order_by('-price_per_kg')
+        elif sort_by == 'weight':
+            fish_list = fish_list.order_by('-available_weight')
+        else:
+            fish_list = fish_list.order_by('-created_at')
+    except Exception:
+        pass
     
     # Pagination
-    paginator = Paginator(fish_list, 12)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    try:
+        paginator = Paginator(fish_list, 12)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+    except Exception:
+        page_obj = []
     
     # Get cart count for navbar
     cart_count = 0
-    if request.user.is_authenticated:
+    user = getattr(request, 'user', None)
+    if user and user.is_authenticated:
         try:
-            cart = Cart.objects.get(user=request.user)
+            cart = Cart.objects.get(user=user)
             cart_count = cart.get_total_items()
-        except Cart.DoesNotExist:
+        except (Cart.DoesNotExist, Exception):
             pass
+    
+    # Get fish type choices safely
+    fish_types = []
+    try:
+        fish_types = list(Fish.FISH_TYPE_CHOICES)
+    except Exception:
+        fish_types = []
     
     context = {
         'page_obj': page_obj,
@@ -117,7 +144,7 @@ def fish_marketplace(request):
         'min_price': min_price,
         'max_price': max_price,
         'sort_by': sort_by,
-        'fish_types': Fish.FISH_TYPE_CHOICES,
+        'fish_types': fish_types,
     }
     return render(request, 'fishing/marketplace.html', context)
 
@@ -1804,10 +1831,14 @@ def api_cart_count(request):
 # Landing Page
 def marketplace_home(request):
     """Marketplace home page with featured fish"""
-    featured_fish = Fish.objects.filter(
-        status='available',
-        available_weight__gt=0
-    ).select_related('fisherman').order_by('-created_at')[:8]
+    featured_fish = []
+    try:
+        featured_fish = list(Fish.objects.filter(
+            status='available',
+            available_weight__gt=0
+        ).select_related('fisherman').order_by('-created_at')[:8])
+    except Exception:
+        featured_fish = []
     
     context = {
         'featured_fish': featured_fish,

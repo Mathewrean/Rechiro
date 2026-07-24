@@ -102,48 +102,67 @@ def csrf_failure_view(request, reason=""):
 
 
 def register_view(request):
-    if request.user.is_authenticated:
+    user = getattr(request, 'user', None)
+    if user and user.is_authenticated:
         return redirect('users:profile')
     
-    if request.method == 'POST':
-        form = UserRegistrationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            username = form.cleaned_data.get('username')
-
-            try:
-                _send_email_verification_link(request, user)
-            except Exception:
-                pass
-
-            # Seller phone ownership verification: KES 1 STK push.
-            if user.role == 'fisherman':
-                stk_result = _initiate_phone_verification_stk(user)
-                if stk_result.get('success'):
-                    messages.info(
-                        request,
-                        'Account created. Complete the KES 1 phone verification STK push to activate seller listing access.'
-                    )
+    form = None
+    try:
+        if request.method == 'POST':
+            form = UserRegistrationForm(request.POST)
+            if form.is_valid():
+                try:
+                    user = form.save()
+                except Exception as e:
+                    messages.error(request, f'Account creation failed: {str(e)}')
+                    form = UserRegistrationForm()
                 else:
-                    messages.warning(
-                        request,
-                        f'Account created, but phone verification STK failed: {stk_result.get("error", "Unknown error")}'
-                    )
+                    username = form.cleaned_data.get('username')
+
+                    try:
+                        _send_email_verification_link(request, user)
+                    except Exception:
+                        pass
+
+                    # Seller phone ownership verification: KES 1 STK push.
+                    if getattr(user, 'role', None) == 'fisherman':
+                        try:
+                            stk_result = _initiate_phone_verification_stk(user)
+                            if stk_result.get('success'):
+                                messages.info(
+                                    request,
+                                    'Account created. Complete the KES 1 phone verification STK push to activate seller listing access.'
+                                )
+                            else:
+                                messages.warning(
+                                    request,
+                                    f'Account created, but phone verification STK failed: {stk_result.get("error", "Unknown error")}'
+                                )
+                        except Exception:
+                            messages.warning(request, 'Account created, but phone verification setup failed.')
+                    else:
+                        messages.info(request, 'Account created. Please verify your email before checkout.')
+
+                    messages.success(request, f'Account created successfully for {username}! You are now logged in.')
+
+                    # Auto-login new users and redirect to the appropriate dashboard.
+                    login(request, user)
+                    role_redirect_map = {
+                        'fisherman': 'fishing:fisherman_dashboard',
+                        'customer': 'fishing:customer_dashboard',
+                        'delivery': 'fishing:delivery_dashboard',
+                        'chairman': 'fishing:chairman_approval_queue',
+                    }
+                    return redirect(role_redirect_map.get(user.role, 'fishing:home'))
             else:
-                messages.info(request, 'Account created. Please verify your email before checkout.')
-
-            messages.success(request, f'Account created successfully for {username}! You are now logged in.')
-
-            # Auto-login new users and redirect to the appropriate dashboard.
-            login(request, user)
-            role_redirect_map = {
-                'fisherman': 'fishing:fisherman_dashboard',
-                'customer': 'fishing:customer_dashboard',
-                'delivery': 'fishing:delivery_dashboard',
-                'chairman': 'fishing:chairman_approval_queue',
-            }
-            return redirect(role_redirect_map.get(user.role, 'fishing:home'))
-    else:
+                messages.error(request, 'Registration failed. Please check the form.')
+        else:
+            try:
+                form = UserRegistrationForm()
+            except Exception:
+                form = UserRegistrationForm()
+    except Exception as e:
+        messages.error(request, f'An error occurred: {str(e)}')
         form = UserRegistrationForm()
     
     context = {
@@ -155,86 +174,45 @@ def register_view(request):
 
 def login_view(request):
     """Handle user login"""
-    def _ensure_google_social_app():
-        if not getattr(settings, 'ALLAUTH_INSTALLED', False):
-            return False
-        client_id = getattr(settings, 'GOOGLE_CLIENT_ID', '')
-        client_secret = getattr(settings, 'GOOGLE_CLIENT_SECRET', '')
-        if not client_id or not client_secret:
-            return False
-        try:
-            from allauth.socialaccount.models import SocialApp
-            from django.contrib.sites.models import Site
-        except Exception:
-            return False
-        app, created = SocialApp.objects.get_or_create(
-            provider='google',
-            defaults={
-                'name': 'Google',
-                'client_id': client_id,
-                'secret': client_secret,
-            }
-        )
-        updated_fields = []
-        if app.client_id != client_id:
-            app.client_id = client_id
-            updated_fields.append('client_id')
-        if app.secret != client_secret:
-            app.secret = client_secret
-            updated_fields.append('secret')
-        if updated_fields:
-            app.save(update_fields=updated_fields)
-        try:
-            site = Site.objects.get_current()
-            if not app.sites.filter(id=site.id).exists():
-                app.sites.add(site)
-        except Exception:
-            return True
-        return True
-
     google_oauth_enabled = False
-    if getattr(settings, 'ALLAUTH_INSTALLED', False):
-        if _ensure_google_social_app():
-            google_oauth_enabled = True
-        else:
-            try:
-                from allauth.socialaccount.models import SocialApp
-                google_oauth_enabled = SocialApp.objects.filter(provider='google').exists()
-            except Exception:
-                google_oauth_enabled = False
-
-    if request.user.is_authenticated:
+    
+    user = getattr(request, 'user', None)
+    if user and user.is_authenticated:
         role_redirect_map = {
             'fisherman': 'fishing:fisherman_dashboard',
             'customer': 'fishing:customer_dashboard',
             'delivery': 'fishing:delivery_dashboard',
             'chairman': 'fishing:chairman_approval_queue',
         }
-        return redirect(role_redirect_map.get(request.user.role, 'fishing:home'))
+        return redirect(role_redirect_map.get(user.role, 'fishing:home'))
     
     next_url = request.GET.get('next') or request.POST.get('next')
 
     if request.method == 'POST':
-        form = UserLoginForm(request, data=request.POST)
-        if form.is_valid():
-            user = form.get_user()
-            if user is not None:
-                login(request, user)
-                if not user.email_verified:
-                    messages.warning(request, 'Please verify your email to unlock full purchase features.')
-                messages.success(request, f'Welcome back, {user.full_name or user.username}!')
-            # Redirect to appropriate dashboard based on role
-            if not next_url:
-                role_redirect_map = {
-                    'fisherman': 'fishing:fisherman_dashboard',
-                    'customer': 'fishing:customer_dashboard',
-                    'delivery': 'fishing:delivery_dashboard',
-                    'chairman': 'fishing:chairman_approval_queue',
-                }
-                next_url = role_redirect_map.get(user.role, 'fishing:home')
-            return redirect(next_url)
-        else:
-            messages.error(request, 'Login failed. Please double-check your username and password.')
+        try:
+            form = UserLoginForm(request, data=request.POST)
+            if form.is_valid():
+                user = form.get_user()
+                if user is not None:
+                    login(request, user)
+                    if hasattr(user, 'email_verified') and not user.email_verified:
+                        messages.warning(request, 'Please verify your email to unlock full purchase features.')
+                    messages.success(request, f'Welcome back, {user.full_name or user.username}!')
+                # Redirect to appropriate dashboard based on role
+                if not next_url:
+                    role_redirect_map = {
+                        'fisherman': 'fishing:fisherman_dashboard',
+                        'customer': 'fishing:customer_dashboard',
+                        'delivery': 'fishing:delivery_dashboard',
+                        'chairman': 'fishing:chairman_approval_queue',
+                    }
+                    next_url = role_redirect_map.get(getattr(user, 'role', ''), 'fishing:home')
+                return redirect(next_url)
+            else:
+                messages.error(request, 'Login failed. Please double-check your username and password.')
+        except Exception:
+            messages.error(request, 'An error occurred during login. Please try again.')
+        form = UserLoginForm()
     else:
         form = UserLoginForm()
     

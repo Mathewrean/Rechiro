@@ -2,7 +2,7 @@ services:
   - type: web
     name: rechiro
     env: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && mkdir -p staticfiles && python manage.py collectstatic --noinput && python manage.py migrate && python manage.py setup_sample_data
     startCommand: gunicorn rechiro.wsgi:application
     envVars:
       - key: DEBUG
@@ -10,8 +10,50 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: ALLOWED_HOSTS
-        value: ".onrender.com"
+        value: "*"
+      - key: SITE_URL
+        value: "https://rechiro.onrender.com"
       - key: MPESA_CALLBACK_URL
         value: "https://rechiro.onrender.com/api/mpesa/callback/"
       - key: EMAIL_BACKEND
         value: "django.core.mail.backends.smtp.EmailBackend"
+      - key: EMAIL_HOST
+        value: "smtp.gmail.com"
+      - key: EMAIL_HOST_USER
+        value: ""
+      - key: EMAIL_HOST_PASSWORD
+        value: ""
+      - key: EMAIL_PORT
+        value: "587"
+      - key: EMAIL_USE_TLS
+        value: "true"
+      - key: ADMIN_USERNAME
+        value: ""
+      - key: ADMIN_EMAIL
+        value: ""
+      - key: ADMIN_PASSWORD
+        value: ""
+      - key: MPESA_BASE_URL
+        value: "https://sandbox.safaricom.co.ke"
+      - key: MPESA_BUSINESS_SHORT_CODE
+        value: ""
+      - key: MPESA_CONSUMER_KEY
+        value: ""
+      - key: MPESA_CONSUMER_SECRET
+        value: ""
+      - key: MPESA_INITIATOR_NAME
+        value: "Rechiro"
+      - key: MPESA_PASSKEY
+        value: ""
+      - key: MPESA_SECURITY_CREDENTIAL
+        value: ""
+      - key: GOOGLE_CLIENT_ID
+        value: ""
+      - key: GOOGLE_CLIENT_SECRET
+        value: ""
+      - key: SECURE_SSL_REDIRECT
+        value: "false"
+      - key: SESSION_COOKIE_SECURE
+        value: "false"
+      - key: CSRF_COOKIE_SECURE
+        value: "false"

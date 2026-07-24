@@ -5,13 +5,31 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
-from django.contrib.staticfiles.views import serve as static_serve
-from django.http import FileResponse, Http404
-from django.views.static import serve as media_serve
-from django.urls import path, include, re_path
+from django.http import FileResponse, Http404, JsonResponse
+from django.urls import path, include
 from django.views.generic import RedirectView
 
 from fishing.views import mpesa_callback, mpesa_b2c_result, mpesa_b2c_timeout
+
+
+def health_check(request):
+    from django.conf import settings
+    from django.db import connection
+    db_ok = True
+    try:
+        cursor = connection.cursor()
+        cursor.execute("SELECT 1")
+    except Exception as e:
+        db_ok = False
+    
+    return JsonResponse({
+        "status": "ok", 
+        "allowed_hosts": list(settings.ALLOWED_HOSTS),
+        "debug": settings.DEBUG,
+        "db_ok": db_ok,
+        "media_root": settings.MEDIA_ROOT,
+        "static_root": settings.STATIC_ROOT,
+    })
 
 
 def service_worker_view(request):
@@ -24,6 +42,7 @@ def service_worker_view(request):
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', RedirectView.as_view(url='/fishing/home/', permanent=False), name='home'),
+    path('health/', health_check, name='health'),
     path('service-worker.js', service_worker_view),
     path('choose-role/', RedirectView.as_view(url='/users/choose-role/', permanent=False), name='choose_role_root'),
     path('users/', include('users.urls')),
@@ -40,18 +59,4 @@ if getattr(settings, "ALLAUTH_INSTALLED", False):
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += staticfiles_urlpatterns()
-else:
-    if importlib.util.find_spec("whitenoise") is None:
-        urlpatterns += [
-            re_path(r"^static/(?P<path>.*)$", static_serve, {"insecure": True}),
-        ]
-    media_url_prefix = settings.MEDIA_URL or ""
-    media_url_prefix = media_url_prefix.lstrip("/")
-    media_url_prefix = media_url_prefix.rstrip("/")
-    if media_url_prefix:
-        media_pattern = rf"^{media_url_prefix}/(?P<path>.*)$"
-    else:
-        media_pattern = r"^(?P<path>.*)$"
-    urlpatterns += [
-        re_path(media_pattern, media_serve, {"document_root": settings.MEDIA_ROOT}),
-    ]
+# In production, whitenoise handles static files. Media files are served via white noise finders.

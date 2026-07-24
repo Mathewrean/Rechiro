@@ -55,9 +55,12 @@ class Fish(models.Model):
         if not self.image:
             return False
         try:
-            return default_storage.exists(self.image.name)
+            storage = default_storage
+            if hasattr(storage, 'exists'):
+                return storage.exists(self.image.name)
         except Exception:
-            return False
+            pass
+        return False
 
     def get_absolute_url(self):
         return reverse('fishing:fish_detail', kwargs={'fish_id': self.pk})
