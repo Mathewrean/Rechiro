@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: rechiro
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn sustainable_fishing.wsgi
+    envVars:
+      - key: DEBUG
+        value: "false"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: MPESA_CALLBACK_URL
+        value: "https://your-app.onrender.com/api/mpesa/callback/"
+      - key: EMAIL_BACKEND
+        value: "django.core.mail.backends.smtp.EmailBackend"
+
+databases:
+  - name: rechiro-db
+    plan: free
