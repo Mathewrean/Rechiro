@@ -37,15 +37,6 @@
                     </button>
                 </form>
 
-                {% if email_verify_link %}
-                    <div class="bg-blue-50 border border-blue-200 text-blue-800 rounded-lg p-3 mb-4">
-                        <p class="text-sm font-medium mb-2">Development Mode</p>
-                        <a href="{{ email_verify_link }}" class="text-primary hover:underline font-semibold">
-                            <i class="fas fa-bolt mr-1"></i>Click to verify now (dev shortcut)
-                        </a>
-                    </div>
-                {% endif %}
-
                 {% if not user.email %}
                     <p class="text-sm text-red-700 mt-4 flex items-center">
                         <i class="fas fa-warning mr-2"></i>You need to add an email address first.

@@ -111,11 +111,8 @@ def register_view(request):
             user = form.save()
             username = form.cleaned_data.get('username')
 
-            # Lightweight email verification for all users.
             try:
-                verify_link = _send_email_verification_link(request, user)
-                if settings.DEBUG:
-                    messages.info(request, f'Email verification link (dev): {verify_link}')
+                _send_email_verification_link(request, user)
             except Exception:
                 pass
 
@@ -262,10 +259,6 @@ def logout_view(request):
 def profile_view(request):
     user = request.user
 
-    email_verify_link = ''
-    if not user.email_verified and settings.DEBUG and user.email:
-        email_verify_link = _build_email_verification_link(request, user)
-
     if user.role == 'fisherman':
         profile = user.get_fisherman_profile()
         fish_listings = Fish.objects.filter(fisherman=user)
@@ -280,7 +273,6 @@ def profile_view(request):
             'total_sales': total_sales,
             'total_catches': total_catches,
             'recent_catches': recent_catches,
-            'email_verify_link': email_verify_link,
             'title': f'{user.full_name or user.username} - Profile'
         }
     else:
@@ -294,7 +286,6 @@ def profile_view(request):
             'orders': orders[:5],
             'total_orders': total_orders,
             'completed_orders': completed_orders,
-            'email_verify_link': email_verify_link,
             'title': f'{user.full_name or user.username} - Profile'
         }
 
@@ -479,9 +470,7 @@ def choose_role_view(request):
         if needs_role_selection:
             if user.email and not user.email_verified:
                 try:
-                    verify_link = _send_email_verification_link(request, user)
-                    if settings.DEBUG:
-                        messages.info(request, f'Email verification link (dev): {verify_link}')
+                    _send_email_verification_link(request, user)
                     messages.success(request, 'Verification email sent. Check your inbox.')
                 except Exception:
                     messages.error(request, 'Failed to send verification email. Try again.')
@@ -540,30 +529,19 @@ def resend_email_verification_view(request):
         messages.error(request, 'Add an email address in your profile first.')
         return redirect('users:edit_profile')
     try:
-        verify_link = _send_email_verification_link(request, user)
-        if settings.DEBUG:
-            messages.info(request, f'Email verification link (dev): {verify_link}')
-        else:
-            messages.success(request, 'Verification email sent. Check your inbox.')
+        _send_email_verification_link(request, user)
+        messages.success(request, 'Verification email sent. Check your inbox.')
     except Exception:
-        if settings.DEBUG:
-            verify_link = _build_email_verification_link(request, user)
-            messages.info(request, f'Email verification link (dev): {verify_link}')
-        else:
-            messages.warning(request, 'Email could not be sent. Contact support.')
+        messages.warning(request, 'Email could not be sent. Contact support.')
     return redirect('users:email_verification')
 
 
 @login_required
 def email_verification_view(request):
-    verify_link = ''
-    if not request.user.email_verified and settings.DEBUG and request.user.email:
-        verify_link = _build_email_verification_link(request, request.user)
     return render(
         request,
         'users/email_verification.html',
         {
-            'email_verify_link': verify_link,
             'title': 'Email Verification - Rechiro',
         }
     )
