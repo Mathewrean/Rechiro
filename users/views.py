@@ -63,7 +63,7 @@ def _send_email_verification_link(request, user):
             message=f'Hello {user.full_name or user.username}, verify your email: {verify_link}',
             from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@rechiro.com'),
             recipient_list=[user.email],
-            fail_silently=False,
+            fail_silently=True,
         )
         return True
     except Exception as e:
@@ -271,9 +271,15 @@ def profile_view(request):
     if user.role == 'fisherman':
         profile = user.get_fisherman_profile()
         fish_listings = Fish.objects.filter(fisherman=user)
-        recent_catches = fish_listings.order_by('-created_at')[:5]
+        recent_catches = list(fish_listings.order_by('-created_at')[:5])
         total_catches = fish_listings.count()
-        total_sales = sum(item.total_price for item in user.sold_items.all() if item.order.status in ['PAID', 'DELIVERED'])
+        from fishing.models import OrderItem
+        total_sales = sum(
+            item.total_price for item in OrderItem.objects.filter(
+                fish__fisherman=user,
+                order__status__in=['PAID', 'DELIVERED']
+            )
+        )
         context = {
             'user': user,
             'profile': profile,

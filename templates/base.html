@@ -405,9 +405,12 @@
                 <p class="text-gray-600 mb-4">Please verify your email address to unlock full features.</p>
                 <p class="text-sm text-gray-500 mb-6">Current email: <span class="font-medium">{{ user.email|default:"Not set" }}</span></p>
                 <div class="flex flex-col gap-3">
-                    <a href="{% url 'users:email_verification' %}" class="bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg font-medium transition-colors block">
-                        <i class="fas fa-paper-plane mr-2"></i>Send Verification Email
-                    </a>
+                    <form method="post" action="{% url 'users:resend_email_verification' %}" id="modalEmailForm">
+                        {% csrf_token %}
+                        <button type="submit" class="bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg font-medium transition-colors w-full">
+                            <i class="fas fa-paper-plane mr-2"></i>Send Verification Email
+                        </button>
+                    </form>
                     <button id="closeVerificationModal" class="text-gray-500 hover:text-gray-700 text-sm">Close</button>
                 </div>
             </div>
@@ -576,6 +579,33 @@
                 }
             }
             document.getElementById('closeVerificationModal')?.addEventListener('click', closeModal);
+            var modalForm = document.getElementById('modalEmailForm');
+            if (modalForm) {
+                modalForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    var btn = modalForm.querySelector('button[type=submit]');
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Sending...';
+                    var formData = new FormData(modalForm);
+                    var csrfInput = modalForm.querySelector('[name=csrfmiddlewaretoken]');
+                    fetch(modalForm.action, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {'X-CSRFToken': csrfInput ? csrfInput.value : getCookie('csrftoken')}
+                    }).then(function() {
+                        location.reload();
+                    }).catch(function() {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Send Verification Email';
+                        window.location.href = '{% url "users:email_verification" %}';
+                    });
+                });
+            }
+            function getCookie(name) {
+                var value = '; ' + document.cookie;
+                var parts = value.split('; ' + name + '=');
+                if (parts.length === 2) return parts.pop().split(';').shift();
+            }
         })();
     </script>
     <script>
