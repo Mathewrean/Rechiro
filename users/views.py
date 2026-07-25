@@ -620,11 +620,15 @@ def api_user_stats(request):
     if request.method == 'GET':
         user = request.user
         if user.role == 'fisherman':
+            from fishing.models import OrderItem
             fish_listings = Fish.objects.filter(fisherman=user)
             stats = {
                 'total_listings': fish_listings.count(),
                 'available_listings': fish_listings.filter(status='available').count(),
-                'total_sales': sum(item.total_price for item in user.sold_items.all()),
+                'total_sales': sum(item.total_price for item in OrderItem.objects.filter(
+                    fish__fisherman=user,
+                    order__status__in=['PAID', 'DELIVERED']
+                )),
                 'member_since': user.created_at.strftime('%B %Y'),
                 'role': user.get_role_display(),
                 'location': user.location,

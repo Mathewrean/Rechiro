@@ -19,15 +19,23 @@ services:
         value: "https://rechiro.onrender.com/api/mpesa/callback/"
       - key: EMAIL_BACKEND
         value: "django.core.mail.backends.console.EmailBackend"
+      - key: EMAIL_HOST
+        value: ""
+      - key: EMAIL_HOST_USER
+        value: ""
+      - key: EMAIL_HOST_PASSWORD
+        value: ""
       - key: DEFAULT_FROM_EMAIL
         value: "noreply@rechiro.com"
       - key: EMAIL_PORT
         value: "587"
       - key: EMAIL_USE_TLS
         value: "true"
-      - key: ADMIN_USERNAME
+      - key: EMAIL_HOST_USER
         value: ""
-      - key: ADMIN_EMAIL
+      - key: EMAIL_HOST_PASSWORD
+        value: ""
+      - key: ADMIN_USERNAME
         value: ""
       - key: ADMIN_PASSWORD
         value: ""
