@@ -125,21 +125,43 @@ def register_view(request):
                         pass
 
                     # Seller phone ownership verification: KES 1 STK push.
+                    # Only attempt for fishermen and only if M-Pesa is configured
                     if getattr(user, 'role', None) == 'fisherman':
                         try:
-                            stk_result = _initiate_phone_verification_stk(user)
-                            if stk_result.get('success'):
+                            from fishing.mpesa_service import initiate_stk_push
+                            has_mpesa = all([
+                                getattr(settings, 'MPESA_CONSUMER_KEY', ''),
+                                getattr(settings, 'MPESA_CONSUMER_SECRET', ''),
+                                getattr(settings, 'MPESA_PASSKEY', ''),
+                                getattr(settings, 'MPESA_BUSINESS_SHORT_CODE', ''),
+                                user.phone,
+                            ])
+                            if has_mpesa and user.phone:
+                                stk_result = initiate_stk_push(
+                                    phone_number=user.phone,
+                                    amount=1,
+                                    order_number=f"PHONE-VERIFY-{user.id}"
+                                )
+                                if stk_result.get('success'):
+                                    messages.info(
+                                        request,
+                                        'Account created. Complete the KES 1 phone verification STK push to activate seller listing access.'
+                                    )
+                                else:
+                                    messages.warning(
+                                        request,
+                                        f'Account created, but phone verification STK failed. You can verify later in your profile.'
+                                    )
+                            else:
                                 messages.info(
                                     request,
-                                    'Account created. Complete the KES 1 phone verification STK push to activate seller listing access.'
-                                )
-                            else:
-                                messages.warning(
-                                    request,
-                                    f'Account created, but phone verification STK failed: {stk_result.get("error", "Unknown error")}'
+                                    'Account created. Add an M-Pesa phone number in your profile to complete verification.'
                                 )
                         except Exception:
-                            messages.warning(request, 'Account created, but phone verification setup failed.')
+                            messages.info(
+                                request,
+                                'Account created. Phone verification can be completed later in your profile.'
+                            )
                     else:
                         messages.info(request, 'Account created. Please verify your email before checkout.')
 
@@ -162,6 +184,8 @@ def register_view(request):
             except Exception:
                 form = UserRegistrationForm()
     except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.exception("Production failure in register_view:")
         messages.error(request, f'An error occurred: {str(e)}')
         form = UserRegistrationForm()
     
@@ -210,7 +234,9 @@ def login_view(request):
                 return redirect(next_url)
             else:
                 messages.error(request, 'Login failed. Please double-check your username and password.')
-        except Exception:
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.exception("Production failure in login_view:")
             messages.error(request, 'An error occurred during login. Please try again.')
         form = UserLoginForm()
     else:
