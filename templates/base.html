@@ -448,19 +448,14 @@
         </div>
     {% endif %}
 
-    <!-- Messages -->
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 left-4 z-50 flex flex-col gap-2"></div>
+
+    <!-- Messages (hidden - toasts will show instead) -->
     {% if messages %}
-        <div class="container mx-auto px-4 mt-4">
+        <div class="hidden">
             {% for message in messages %}
-                <div class="{% if message.tags == 'success' %}bg-green-100 border-l-4 border-green-500 text-green-700{% elif message.tags == 'error' %}bg-red-100 border-l-4 border-red-500 text-red-700{% elif message.tags == 'warning' %}bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700{% else %}bg-blue-100 border-l-4 border-blue-500 text-blue-700{% endif %} p-4 mb-4 rounded-r-lg font-medium relative">
-                    <div class="flex items-start">
-                        <i class="fas fa-info-circle mr-2 mt-0.5"></i>
-                        <span class="flex-1">{{ message }}</span>
-                        <button type="button" class="ml-4 text-current hover:text-gray-600" onclick="this.parentElement.parentElement.remove()">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
+                <span class="django-message" data-type="{{ message.tags }}" data-text="{{ message|escapejs }}"></span>
             {% endfor %}
         </div>
     {% endif %}
@@ -699,6 +694,32 @@
     {% block scripts %}
     {% endblock %}
     <script>
+        // Toast notification system
+        function showToast(message, type) {
+            var toastContainer = document.getElementById('toast-container');
+            var toast = document.createElement('div');
+            var bgColor = 'bg-blue-500';
+            var iconClass = 'fa-info-circle';
+            if (type === 'success') { bgColor = 'bg-green-500'; iconClass = 'fa-check-circle'; }
+            if (type === 'error') { bgColor = 'bg-red-500'; iconClass = 'fa-exclamation-circle'; }
+            if (type === 'warning') { bgColor = 'bg-amber-500'; iconClass = 'fa-exclamation-triangle'; }
+            
+            toast.className = bgColor + ' text-white px-4 py-3 rounded-lg shadow-lg flex items-start gap-2 max-w-sm';
+            toast.innerHTML = '<i class="fas ' + iconClass + ' mt-0.5"></i><span class="flex-1">' + message + '</span><button class="ml-2 text-white hover:text-gray-200" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>';
+            toastContainer.appendChild(toast);
+            
+            setTimeout(function() {
+                if (toast.parentElement) toast.remove();
+            }, 5000);
+        }
+        
+        // Display Django messages as toasts
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.django-message').forEach(function(el) {
+                showToast(el.dataset.text, el.dataset.type);
+            });
+        });
+        
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/service-worker.js', { scope: '/' })

@@ -30,7 +30,8 @@
                     Current email: <span class="font-semibold">{{ user.email|default:"Not set" }}</span>
                 </p>
 
-                <form method="post" action="{% url 'users:resend_email_verification' %}" class="mb-4 form-panel">
+                <form method="post" action="{% url 'users:resend_email_verification' %}" 
+                      id="emailVerificationForm" class="mb-4 form-panel">
                     {% csrf_token %}
                     <button type="submit" class="bg-primary hover:bg-secondary text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center">
                         <i class="fas fa-paper-plane mr-2"></i>Send Verification Email
@@ -52,4 +53,51 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var form = document.getElementById('emailVerificationForm');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                var btn = form.querySelector('button[type=submit]');
+                var originalText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Sending...';
+                
+                var formData = new FormData(form);
+                var csrfInput = form.querySelector('[name=csrfmiddlewaretoken]');
+                var csrfToken = csrfInput ? csrfInput.value : '';
+                
+                if (!csrfToken) {
+                    // Fallback to normal form submission
+                    form.submit();
+                    return;
+                }
+                
+                fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {'X-CSRFToken': csrfToken},
+                    credentials: 'same-origin'
+                }).then(function(resp) {
+                    if (resp.redirected) {
+                        window.location.href = resp.url;
+                    } else {
+                        return resp.text();
+                    }
+                }).then(function(html) {
+                    if (html) {
+                        window.location.reload();
+                    }
+                }).catch(function(err) {
+                    console.log('AJAX failed, using fallback:', err);
+                    form.submit();
+                });
+            });
+        }
+    });
+</script>
 {% endblock %}

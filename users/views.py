@@ -58,13 +58,19 @@ def _build_email_verification_link(request, user):
 def _send_email_verification_link(request, user):
     verify_link = _build_email_verification_link(request, user)
     try:
-        send_mail(
+        import django.core.mail as mail
+        connection = mail.get_connection()
+        sent = mail.send_mail(
             subject='Verify your Rechiro account email',
             message=f'Hello {user.full_name or user.username}, verify your email: {verify_link}',
             from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@rechiro.com'),
             recipient_list=[user.email],
-            fail_silently=True,
+            fail_silently=False,
         )
+        if sent == 0:
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Email not sent to {user.email} (connection may be console or failed)")
+            return True  # Still return True for console backend compatibility
         return True
     except Exception as e:
         logger = logging.getLogger(__name__)
