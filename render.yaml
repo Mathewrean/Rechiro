@@ -57,5 +57,5 @@ services:
         value: "false"
       - key: CSRF_COOKIE_SECURE
         value: "false"
-    - key: DATABASE_URL
-        value: "postgresql://postgres.lyqfkparljiwqfbgwksv:2954122700-m@aws-0-eu-west-1.pooler.supabase.com:6543/postgres"
+      - key: DATABASE_URL
+        value: "postgresql://postgres.lyqfkparljiwqfbgwksv:2954122700%2Dm@aws-0-eu-west-1.pooler.supabase.com:6543/postgres"
