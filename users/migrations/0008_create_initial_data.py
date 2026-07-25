@@ -28,8 +28,12 @@ def create_initial_data(apps, schema_editor):
         client_secret = getattr(settings, 'GOOGLE_CLIENT_SECRET', '')
         
         if client_id and client_secret:
-            # Determine site domain
-            if os.environ.get('RAILWAY_STATIC_URL') or 'rechiro-production.up.railway.app' in str(getattr(settings, 'ALLOWED_HOSTS', [])):
+            # Determine site domain from settings or environment
+            site_url = getattr(settings, 'SITE_URL', '')
+            if site_url:
+                # Extract domain from URL (remove https:// prefix)
+                site_domain = site_url.replace('https://', '').replace('http://', '').rstrip('/')
+            elif os.environ.get('RAILWAY_STATIC_URL') or 'rechiro-production.up.railway.app' in str(getattr(settings, 'ALLOWED_HOSTS', [])):
                 site_domain = 'rechiro-production.up.railway.app'
             else:
                 site_domain = getattr(settings, 'ALLOWED_HOSTS', ['localhost:8000'])[0] if getattr(settings, 'ALLOWED_HOSTS', []) else 'localhost:8000'

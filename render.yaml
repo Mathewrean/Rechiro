@@ -13,16 +13,14 @@ services:
         value: "*"
       - key: SITE_URL
         value: "https://rechiro.onrender.com"
+      - key: DATABASE_URL
+        fromSecret: true
       - key: MPESA_CALLBACK_URL
         value: "https://rechiro.onrender.com/api/mpesa/callback/"
       - key: EMAIL_BACKEND
-        value: "django.core.mail.backends.smtp.EmailBackend"
-      - key: EMAIL_HOST
-        value: "smtp.gmail.com"
-      - key: EMAIL_HOST_USER
-        value: ""
-      - key: EMAIL_HOST_PASSWORD
-        value: ""
+        value: "django.core.mail.backends.console.EmailBackend"
+      - key: DEFAULT_FROM_EMAIL
+        value: "noreply@rechiro.com"
       - key: EMAIL_PORT
         value: "587"
       - key: EMAIL_USE_TLS

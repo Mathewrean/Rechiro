@@ -63,12 +63,13 @@ def _send_email_verification_link(request, user):
             message=f'Hello {user.full_name or user.username}, verify your email: {verify_link}',
             from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@rechiro.com'),
             recipient_list=[user.email],
-            fail_silently=True,
+            fail_silently=False,
         )
+        return True
     except Exception as e:
         logger = logging.getLogger(__name__)
         logger.error(f"Failed to send verification email to {user.email}: {e}")
-    return verify_link
+        return False
 
 
 def _initiate_phone_verification_stk(user):
@@ -199,7 +200,11 @@ def register_view(request):
 def login_view(request):
     """Handle user login"""
     google_oauth_enabled = False
-    
+    try:
+        from allauth.socialaccount.models import SocialApp
+        google_oauth_enabled = SocialApp.objects.filter(provider='google').exists()
+    except Exception:
+        pass
     user = getattr(request, 'user', None)
     if user and user.is_authenticated:
         role_redirect_map = {
@@ -473,11 +478,11 @@ def choose_role_view(request):
 
         if needs_role_selection:
             if user.email and not user.email_verified:
-                try:
-                    _send_email_verification_link(request, user)
+                sent = _send_email_verification_link(request, user)
+                if sent:
                     messages.success(request, 'Verification email sent. Check your inbox.')
-                except Exception:
-                    messages.error(request, 'Failed to send verification email. Try again.')
+                else:
+                    messages.info(request, 'Email delivery unavailable. Contact support.')
 
             if selected_role == 'fisherman':
                 if user.phone:
@@ -532,10 +537,10 @@ def resend_email_verification_view(request):
     if not user.email:
         messages.error(request, 'Add an email address in your profile first.')
         return redirect('users:edit_profile')
-    try:
-        _send_email_verification_link(request, user)
+    sent = _send_email_verification_link(request, user)
+    if sent:
         messages.success(request, 'Verification email sent. Check your inbox.')
-    except Exception:
+    else:
         messages.warning(request, 'Email could not be sent. Contact support.')
     return redirect('users:email_verification')
 
