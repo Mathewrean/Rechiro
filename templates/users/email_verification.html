@@ -30,10 +30,10 @@
                     Current email: <span class="font-semibold">{{ user.email|default:"Not set" }}</span>
                 </p>
 
-                <form method="post" action="{% url 'users:resend_email_verification' %}" class="mb-4 form-panel">
+                <form method="post" action="{% url 'users:resend_email_verification' %}" style="margin-bottom: 1rem;">
                     {% csrf_token %}
-                    <button type="submit" class="bg-primary hover:bg-secondary text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center">
-                        <i class="fas fa-paper-plane mr-2"></i>Send Verification Email
+                    <button type="submit" style="background-color:#0b5d66; color:white; padding:0.85rem 1.5rem; border:none; border-radius:0.5rem; cursor:pointer; font-weight:500;">
+                        Send Verification Email
                     </button>
                 </form>
 
