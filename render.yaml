@@ -28,8 +28,10 @@ services:
       - key: DEFAULT_FROM_EMAIL
         value: "noreply@rechiro.com"
       - key: EMAIL_PORT
-        value: "587"
+        value: "465"
       - key: EMAIL_USE_TLS
+        value: "false"
+      - key: EMAIL_USE_SSL
         value: "true"
       - key: ADMIN_USERNAME
         value: ""
