@@ -1,18 +1,18 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, FishermanProfile, CustomerProfile, BeachChairmanProfile, PhoneVerificationTransaction
+from .models import User, FishermanProfile, CustomerProfile, BeachChairmanProfile
 
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    list_display = ('username', 'email', 'full_name', 'role', 'email_verified', 'phone_verified', 'is_active', 'created_at')
-    list_filter = ('role', 'email_verified', 'phone_verified', 'is_active', 'created_at')
+    list_display = ('username', 'email', 'full_name', 'role', 'phone', 'is_active', 'created_at')
+    list_filter = ('role', 'is_active', 'created_at')
     search_fields = ('username', 'email', 'full_name', 'phone')
     ordering = ('-created_at',)
     
     fieldsets = (
         ('Authentication', {'fields': ('username', 'password')}),
-        ('Personal Info', {'fields': ('full_name', 'email', 'email_verified', 'phone', 'phone_verified', 'profile_picture')}),
+        ('Personal Info', {'fields': ('full_name', 'email', 'phone', 'profile_picture')}),
         ('Role & Status', {'fields': ('role', 'is_active', 'is_staff', 'is_superuser')}),
         ('Location', {'fields': ('location',)}),
     )
@@ -26,7 +26,6 @@ class UserAdmin(BaseUserAdmin):
     )
     
     def save_model(self, request, obj, form, change):
-        """Ensure email_verified and phone_verified are saved properly."""
         super().save_model(request, obj, form, change)
 
 
@@ -57,10 +56,3 @@ class BeachChairmanProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'beach_name', 'phone', 'created_at')
     search_fields = ('user__username', 'user__email', 'beach_name', 'phone')
     raw_id_fields = ('user',)
-
-
-@admin.register(PhoneVerificationTransaction)
-class PhoneVerificationTransactionAdmin(admin.ModelAdmin):
-    list_display = ('user', 'phone_number', 'amount', 'checkout_request_id', 'status', 'mpesa_receipt_number', 'created_at')
-    list_filter = ('status', 'created_at')
-    search_fields = ('user__username', 'phone_number', 'checkout_request_id', 'mpesa_receipt_number')

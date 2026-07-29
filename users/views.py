@@ -1,10 +1,7 @@
-from decimal import Decimal
-
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
-from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import redirect, render, get_object_or_404
@@ -13,90 +10,14 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import UpdateView
-from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
 import logging
 
-from .models import User, FishermanProfile, CustomerProfile, BeachChairmanProfile, PhoneVerificationTransaction
+from .models import User, FishermanProfile, CustomerProfile, BeachChairmanProfile
 from .forms import (
     UserRegistrationForm, UserLoginForm, ProfileUpdateForm, PasswordChangeForm,
     FishermanProfileForm, CustomerProfileForm, BeachChairmanProfileForm
 )
 from fishing.models import Fish, Order
-
-
-def _ensure_role_profile(user):
-    if user.role == 'fisherman':
-        FishermanProfile.objects.get_or_create(
-            user=user,
-            defaults={
-                'phone': user.phone or '',
-                'landing_site': user.location or '',
-                'location': user.location or '',
-                'contact_details': '',
-            }
-        )
-    elif user.role == 'customer':
-        CustomerProfile.objects.get_or_create(
-            user=user,
-            defaults={
-                'phone': user.phone or '',
-                'delivery_location': user.location or '',
-                'delivery_address': '',
-                'preferred_fulfillment': 'delivery',
-            }
-        )
-
-
-def _build_email_verification_link(request, user):
-    signer = TimestampSigner()
-    token = signer.sign(user.pk)
-    return request.build_absolute_uri(
-        reverse_lazy('users:verify_email', kwargs={'token': token})
-    )
-
-
-def _send_email_verification_link(request, user):
-    verify_link = _build_email_verification_link(request, user)
-    try:
-        import django.core.mail as mail
-        connection = mail.get_connection()
-        sent = mail.send_mail(
-            subject='Verify your Rechiro account email',
-            message=f'Hello {user.full_name or user.username}, verify your email: {verify_link}',
-            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@rechiro.com'),
-            recipient_list=[user.email],
-            fail_silently=False,
-        )
-        if sent == 0:
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Email not sent to {user.email} (connection may be console or failed)")
-            return True  # Still return True for console backend compatibility
-        return True
-    except Exception as e:
-        logger = logging.getLogger(__name__)
-        logger.error(f"Failed to send verification email to {user.email}: {e}")
-        return False
-
-
-def _initiate_phone_verification_stk(user):
-    from fishing.mpesa_service import initiate_stk_push
-    verification_ref = f"PHONE-VERIFY-{user.id}"
-    stk_result = initiate_stk_push(
-        phone_number=user.phone,
-        amount=1,
-        order_number=verification_ref,
-        transaction_type='CustomerPayBillOnline',
-    )
-    if stk_result.get('success'):
-        PhoneVerificationTransaction.objects.create(
-            user=user,
-            phone_number=user.phone,
-            amount=Decimal('1.00'),
-            merchant_request_id=stk_result.get('merchant_request_id', ''),
-            checkout_request_id=stk_result.get('checkout_request_id', ''),
-            status='PENDING',
-        )
-    return stk_result
 
 
 def csrf_failure_view(request, reason=""):
@@ -125,52 +46,6 @@ def register_view(request):
                     form = UserRegistrationForm()
                 else:
                     username = form.cleaned_data.get('username')
-
-                    try:
-                        _send_email_verification_link(request, user)
-                    except Exception:
-                        pass
-
-                    # Seller phone ownership verification: KES 1 STK push.
-                    # Only attempt for fishermen and only if M-Pesa is configured
-                    if getattr(user, 'role', None) == 'fisherman':
-                        try:
-                            from fishing.mpesa_service import initiate_stk_push
-                            has_mpesa = all([
-                                getattr(settings, 'MPESA_CONSUMER_KEY', ''),
-                                getattr(settings, 'MPESA_CONSUMER_SECRET', ''),
-                                getattr(settings, 'MPESA_PASSKEY', ''),
-                                getattr(settings, 'MPESA_BUSINESS_SHORT_CODE', ''),
-                                user.phone,
-                            ])
-                            if has_mpesa and user.phone:
-                                stk_result = initiate_stk_push(
-                                    phone_number=user.phone,
-                                    amount=1,
-                                    order_number=f"PHONE-VERIFY-{user.id}"
-                                )
-                                if stk_result.get('success'):
-                                    messages.info(
-                                        request,
-                                        'Account created. Complete the KES 1 phone verification STK push to activate seller listing access.'
-                                    )
-                                else:
-                                    messages.warning(
-                                        request,
-                                        f'Account created, but phone verification STK failed. You can verify later in your profile.'
-                                    )
-                            else:
-                                messages.info(
-                                    request,
-                                    'Account created. Add an M-Pesa phone number in your profile to complete verification.'
-                                )
-                        except Exception:
-                            messages.info(
-                                request,
-                                'Account created. Phone verification can be completed later in your profile.'
-                            )
-                    else:
-                        messages.info(request, 'Account created. Please verify your email before checkout.')
 
                     messages.success(request, f'Account created successfully for {username}! You are now logged in.')
 
@@ -230,8 +105,6 @@ def login_view(request):
                 user = form.get_user()
                 if user is not None:
                     login(request, user)
-                    if hasattr(user, 'email_verified') and not user.email_verified:
-                        messages.warning(request, 'Please verify your email to unlock full purchase features.')
                     messages.success(request, f'Welcome back, {user.full_name or user.username}!')
                 # Redirect to appropriate dashboard based on role
                 if not next_url:
@@ -488,118 +361,10 @@ def choose_role_view(request):
         needs_role_selection = request.session.get('needs_role_selection')
         request.session['needs_role_selection'] = False
 
-        if needs_role_selection:
-            if user.email and not user.email_verified:
-                sent = _send_email_verification_link(request, user)
-                if sent:
-                    messages.success(request, 'Verification email sent. Check your inbox.')
-                else:
-                    messages.info(request, 'Email delivery unavailable. Contact support.')
-
-            if selected_role == 'fisherman':
-                if user.phone:
-                    stk_result = _initiate_phone_verification_stk(user)
-                    if stk_result.get('success'):
-                        messages.info(
-                            request,
-                            'Complete the KES 1 phone verification STK push to activate seller listing access.'
-                        )
-                    else:
-                        messages.warning(
-                            request,
-                            f"Phone verification STK failed: {stk_result.get('error', 'Unknown error')}"
-                        )
-                else:
-                    messages.warning(
-                        request,
-                        'Add a phone number in your profile to complete fisherman phone verification.'
-                    )
         messages.success(request, f'Role selected: {user.get_role_display()}')
         return redirect('users:dashboard')
 
     return render(request, 'users/choose_role.html', {'title': 'Choose Role - Rechiro'})
-
-
-def verify_email_view(request, token):
-    """Verify user email via signed token."""
-    signer = TimestampSigner()
-    try:
-        user_id = signer.unsign(token, max_age=60 * 60 * 24 * 7)  # 7 days
-        user = User.objects.get(pk=user_id)
-        user.email_verified = True
-        user.save(update_fields=['email_verified'])
-        messages.success(request, 'Email verified successfully. You can now purchase with confidence.')
-        # Refresh session user if currently logged in
-        if request.user.is_authenticated and request.user.pk == user.pk:
-            request.user.refresh_from_db()
-    except (BadSignature, SignatureExpired, User.DoesNotExist):
-        messages.error(request, 'Invalid or expired verification link.')
-    if request.user.is_authenticated:
-        return redirect('users:email_verification')
-    return redirect('users:login')
-
-
-@login_required
-@require_http_methods(['POST'])
-def resend_email_verification_view(request):
-    user = request.user
-    if user.email_verified:
-        messages.info(request, 'Your email is already verified.')
-        return redirect('users:email_verification')
-    if not user.email:
-        messages.error(request, 'Add an email address in your profile first.')
-        return redirect('users:edit_profile')
-    sent = _send_email_verification_link(request, user)
-    if sent:
-        messages.success(request, 'Verification email sent. Check your inbox.')
-    else:
-        messages.warning(request, 'Email could not be sent. Contact support.')
-    return redirect('users:email_verification')
-
-
-@login_required
-def email_verification_view(request):
-    return render(
-        request,
-        'users/email_verification.html',
-        {
-            'title': 'Email Verification - Rechiro',
-        }
-    )
-
-
-@login_required
-def phone_verification_view(request):
-    latest_txn = PhoneVerificationTransaction.objects.filter(user=request.user).order_by('-created_at').first()
-    return render(
-        request,
-        'users/phone_verification.html',
-        {
-            'latest_txn': latest_txn,
-            'title': 'Phone Verification - Rechiro',
-        }
-    )
-
-
-@login_required
-@require_http_methods(['POST'])
-def resend_phone_verification_view(request):
-    user = request.user
-    if user.role not in ['fisherman', 'customer']:
-        messages.error(request, 'Phone verification is only required for fishermen and customers.')
-        return redirect('users:profile')
-    if user.phone_verified:
-        messages.info(request, 'Your phone is already verified.')
-        return redirect('users:phone_verification')
-    if not user.phone:
-        messages.error(request, 'Add a phone number in your profile first.')
-        return redirect('users:edit_profile')
-    stk_result = _initiate_phone_verification_stk(user)
-    if stk_result.get('success'):
-        messages.success(request, 'KES 1 verification STK push sent. Complete it on your phone.')
-    else:
-        messages.error(request, f'Failed to send verification STK push: {stk_result.get("error", "Unknown error")}')
-    return redirect('users:phone_verification')
 
 
 @login_required

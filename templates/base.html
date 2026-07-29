@@ -396,57 +396,8 @@
         </button>
     </div>
 
-    <!-- Email Verification Modal -->
-    <div id="emailVerificationModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center">
-        <div class="bg-white rounded-2xl shadow-lg max-w-md w-full mx-4 p-6 transform scale-95 opacity-0 transition-all duration-300">
-            <div class="text-center">
-                <i class="fas fa-envelope-open-text text-4xl text-primary mb-4"></i>
-                <h2 class="text-xl font-bold text-gray-800 mb-2">Verify Your Email</h2>
-                <p class="text-gray-600 mb-4">Please verify your email address to unlock full features.</p>
-                <p class="text-sm text-gray-500 mb-6">Current email: <span class="font-medium">{{ user.email|default:"Not set" }}</span></p>
-                <div class="flex flex-col gap-3">
-                    <a href="{% url 'users:email_verification' %}" class="bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg font-medium transition-colors w-full flex items-center justify-center">
-                        <i class="fas fa-paper-plane mr-2"></i>Send Verification Email
-                    </a>
-                    <button id="closeVerificationModal" class="text-gray-500 hover:text-gray-700 text-sm">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Spacer for navbar -->
     <div class="h-16"></div>
-
-    {% if user.is_authenticated and not user.email_verified %}
-        <div class="container mx-auto px-4 mt-4">
-            <div class="bg-amber-100 border-l-4 border-amber-500 text-amber-900 p-4 rounded-r-lg">
-                <div class="flex items-center justify-between gap-4">
-                    <div class="flex items-center">
-                        <i class="fas fa-triangle-exclamation mr-2"></i>
-                        <span>Email not verified. Checkout is locked until verification is complete.</span>
-                    </div>
-                    <a href="{% url 'users:email_verification' %}" class="whitespace-nowrap bg-amber-600 hover:bg-amber-700 text-white px-3 py-2 rounded text-sm font-medium">
-                        Verify Email
-                    </a>
-                </div>
-            </div>
-        </div>
-    {% endif %}
-    {% if user.is_authenticated and user.role == 'fisherman' and not user.phone_verified %}
-        <div class="container mx-auto px-4 mt-4">
-            <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-900 p-4 rounded-r-lg">
-                <div class="flex items-center justify-between gap-4">
-                    <div class="flex items-center">
-                        <i class="fas fa-mobile-screen mr-2"></i>
-                        <span>Phone ownership is not verified. Fish listing is locked until KES 1 STK verification is completed.</span>
-                    </div>
-                    <a href="{% url 'users:phone_verification' %}" class="whitespace-nowrap bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-medium">
-                        Verify Phone
-                    </a>
-                </div>
-            </div>
-        </div>
-    {% endif %}
 
     <!-- Toast Container -->
     <div id="toast-container" class="fixed top-4 left-4 z-50 flex flex-col gap-2"></div>
@@ -556,11 +507,11 @@
         });
     </script>
 <script>
-        window.USER_NEEDS_EMAIL_VERIFICATION = {% if user.is_authenticated and not user.email_verified %}true{% else %}false{% endif %};
+        window.USER_IS_AUTHENTICATED = {% if user.is_authenticated %}true{% else %}false{% endif %};
         window.USER_EMAIL = '{{ user.email|escapejs }}';
         (function() {
             var emailModal = document.getElementById('emailVerificationModal');
-            if (emailModal && window.USER_NEEDS_EMAIL_VERIFICATION && window.USER_EMAIL) {
+            if (emailModal && window.USER_IS_AUTHENTICATED && window.USER_EMAIL) {
                 emailModal.classList.add('active');
                 document.body.classList.add('overflow-hidden');
             }

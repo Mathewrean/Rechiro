@@ -22,8 +22,7 @@ from .models import (
 )
 from .mpesa_service import MpesaService, initiate_stk_push, process_payment_callback
 from .forms import ContactForm
-from users.models import FishermanProfile, CustomerProfile, User
-from users.models import PhoneVerificationTransaction, BeachChairmanProfile
+from users.models import FishermanProfile, CustomerProfile, User, BeachChairmanProfile
 
 logger = logging.getLogger(__name__)
 
@@ -315,9 +314,6 @@ def checkout_initiate(request):
     if not items:
         messages.error(request, 'Your cart is empty.')
         return redirect('fishing:marketplace')
-    if request.user.role == 'customer' and not request.user.email_verified:
-        messages.error(request, 'Please verify your email before checkout.')
-        return redirect('users:email_verification')
     if not request.user.phone:
         messages.error(request, 'Please add a phone number to your profile.')
         return redirect('users:edit_profile')
@@ -371,12 +367,9 @@ def checkout_process(request):
         messages.error(request, 'Your cart is empty.')
         return redirect('fishing:marketplace')
     if request.user.role == 'customer':
-        if not request.user.email_verified:
-            messages.error(request, 'Please verify your email before checkout.')
-            return redirect('users:email_verification')
-        if not request.user.phone_verified:
-            messages.error(request, 'Please verify your phone number before checkout.')
-            return redirect('users:phone_verification')
+        if not request.user.email:
+            messages.error(request, 'Add an email address in your profile first.')
+            return redirect('users:edit_profile')
     if not _is_public_callback_url(getattr(settings, 'MPESA_CALLBACK_URL', '')):
         messages.error(
             request,
@@ -557,40 +550,8 @@ def mpesa_callback(request):
                     checkout_request_id=checkout_request_id
                 )
             except PaymentTransaction.DoesNotExist:
-                # Fallback: phone ownership verification callbacks.
-                try:
-                    verification_txn = PhoneVerificationTransaction.objects.select_for_update().select_related('user').get(
-                        checkout_request_id=checkout_request_id
-                    )
-                except PhoneVerificationTransaction.DoesNotExist:
-                    logger.error('Transaction not found for checkout_request_id=%s', checkout_request_id)
-                    return JsonResponse({'status': 'error', 'message': 'Transaction not found'}, status=404)
-
-                if verification_txn.status == 'COMPLETED':
-                    return JsonResponse({'status': 'success', 'message': 'Phone verification already processed'})
-
-                result_code = result.get('result_code')
-                try:
-                    normalized_result_code = int(result_code)
-                except (TypeError, ValueError):
-                    normalized_result_code = -1
-
-                verification_txn.result_code = normalized_result_code
-                verification_txn.result_desc = result.get('result_desc', '')
-                if normalized_result_code == 0 and result.get('success'):
-                    verification_txn.status = 'COMPLETED'
-                    verification_txn.mpesa_receipt_number = result.get('transaction_id', '') or ''
-                    verification_txn.save(update_fields=[
-                        'status', 'mpesa_receipt_number', 'result_code', 'result_desc', 'updated_at'
-                    ])
-                    verification_txn.user.phone_verified = True
-                    verification_txn.user.save(update_fields=['phone_verified'])
-                    logger.info('Seller phone verified for user_id=%s via checkout_request_id=%s', verification_txn.user_id, checkout_request_id)
-                    return JsonResponse({'status': 'success', 'message': 'Phone verification completed'})
-
-                verification_txn.status = 'FAILED'
-                verification_txn.save(update_fields=['status', 'result_code', 'result_desc', 'updated_at'])
-                return JsonResponse({'status': 'failed', 'message': 'Phone verification failed'})
+                logger.error('Transaction not found for checkout_request_id=%s', checkout_request_id)
+                return JsonResponse({'status': 'error', 'message': 'Transaction not found'}, status=404)
 
             order = payment_txn.order
 
@@ -1018,9 +979,6 @@ def add_fish(request):
     except FishermanProfile.DoesNotExist:
         messages.error(request, 'Complete fisherman profile first.')
         return redirect('users:edit_profile')
-    if not request.user.phone_verified:
-        messages.error(request, 'Complete KES 1 phone ownership verification before listing fish.')
-        return redirect('users:phone_verification')
     if not fisher_profile.chairman_approved:
         messages.error(request, 'Your listing access is pending Lake Chairman approval.')
         return redirect('users:profile')
@@ -1512,10 +1470,6 @@ def request_chairman_approval(request):
     except FishermanProfile.DoesNotExist:
         messages.error(request, 'Complete your fisherman profile first.')
         return redirect('users:edit_profile')
-
-    if not request.user.phone_verified:
-        messages.error(request, 'Complete KES 1 phone verification first.')
-        return redirect('users:profile')
 
     notes = request.POST.get('notes', '').strip()
     landing_site = (profile.landing_site or '').strip()
