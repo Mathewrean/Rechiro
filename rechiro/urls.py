@@ -2,7 +2,6 @@ import importlib.util
 from pathlib import Path
 
 from django.conf import settings
-from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.http import FileResponse, Http404, JsonResponse
@@ -39,12 +38,6 @@ def service_worker_view(request):
     except FileNotFoundError:
         raise Http404()
 
-from django.views.static import serve as django_serve
-
-def media_serve(request, path):
-    return django_serve(request, path, document_root=settings.MEDIA_ROOT)
-
-
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', RedirectView.as_view(url='/fishing/home/', permanent=False), name='home'),
@@ -62,5 +55,4 @@ urlpatterns = [
 if getattr(settings, "ALLAUTH_INSTALLED", False):
     urlpatterns.append(path('accounts/', include('allauth.urls')))
 
-urlpatterns += static(settings.MEDIA_URL, view=media_serve)
 urlpatterns += staticfiles_urlpatterns()

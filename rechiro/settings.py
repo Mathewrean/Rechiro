@@ -184,6 +184,8 @@ try:
     os.makedirs(MEDIA_ROOT, exist_ok=True)
 except (OSError, PermissionError):
     pass
+WHITENOISE_ROOT = str(MEDIA_ROOT)
+WHITENOISE_PREFIX = '/media'
 
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
