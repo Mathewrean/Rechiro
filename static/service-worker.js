@@ -71,7 +71,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first for static assets
+  // Cache-first for static assets (skip media files)
+if (!url.pathname.startsWith('/media/')) {
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) {
@@ -94,6 +95,7 @@ self.addEventListener('fetch', (event) => {
         });
     })
   );
+}
 });
 
 // Handle offline cart sync

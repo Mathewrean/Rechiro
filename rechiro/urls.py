@@ -39,6 +39,12 @@ def service_worker_view(request):
     except FileNotFoundError:
         raise Http404()
 
+from django.views.static import serve as django_serve
+
+def media_serve(request, path):
+    return django_serve(request, path, document_root=settings.MEDIA_ROOT)
+
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', RedirectView.as_view(url='/fishing/home/', permanent=False), name='home'),
@@ -56,7 +62,5 @@ urlpatterns = [
 if getattr(settings, "ALLAUTH_INSTALLED", False):
     urlpatterns.append(path('accounts/', include('allauth.urls')))
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += staticfiles_urlpatterns()
-# In production, whitenoise handles static files. Media files are served via white noise finders.
+urlpatterns += static(settings.MEDIA_URL, view=media_serve)
+urlpatterns += staticfiles_urlpatterns()

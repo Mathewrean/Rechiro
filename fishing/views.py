@@ -1,3 +1,6 @@
+from io import BytesIO
+from PIL import Image as PILImage
+from django.core.files.base import ContentFile
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -25,6 +28,25 @@ from .forms import ContactForm
 from users.models import FishermanProfile, CustomerProfile, User, BeachChairmanProfile
 
 logger = logging.getLogger(__name__)
+
+MAX_IMAGE_SIZE = (1200, 1200)
+IMAGE_QUALITY = 85
+
+
+def _process_image(uploaded_image):
+    try:
+        file_bytes = uploaded_image.read()
+        img = PILImage.open(BytesIO(file_bytes))
+        if img.mode in ('RGBA', 'P'):
+            img = img.convert('RGB')
+        img.thumbnail(MAX_IMAGE_SIZE, PILImage.LANCZOS)
+        buffer = BytesIO()
+        img.save(buffer, format='JPEG', quality=IMAGE_QUALITY)
+        buffer.seek(0)
+        return ContentFile(buffer.read(), name=uploaded_image.name.rsplit('.', 1)[0] + '.jpg')
+    except Exception:
+        uploaded_image.seek(0)
+        return uploaded_image
 
 
 def _is_delivery_user(user):
@@ -986,9 +1008,8 @@ def add_fish(request):
     if request.method == 'POST':
         try:
             uploaded_image = request.FILES.get('image')
-            if uploaded_image and not str(uploaded_image.content_type).startswith('image/'):
-                messages.error(request, 'Please upload a valid image file.')
-                return redirect('fishing:add_fish')
+            if uploaded_image:
+                uploaded_image = _process_image(uploaded_image)
 
             fish = Fish.objects.create(
                 fisherman=request.user,
@@ -1033,9 +1054,8 @@ def edit_fish(request, fish_id):
         old_weight = fish.available_weight
         uploaded_image = request.FILES.get('image')
         remove_image = request.POST.get('remove_image') == 'on'
-        if uploaded_image and not str(uploaded_image.content_type).startswith('image/'):
-            messages.error(request, 'Please upload a valid image file.')
-            return redirect('fishing:edit_fish', fish_id=fish.id)
+        if uploaded_image:
+            uploaded_image = _process_image(uploaded_image)
         
         fish.name = request.POST.get('name')
         fish.fish_type = request.POST.get('fish_type')
@@ -1687,6 +1707,7 @@ def delivery_status_update(request, order_number):
         if confirmation_code:
             delivery.confirmation_code = confirmation_code
         if proof_image:
+            proof_image = _process_image(proof_image)
             delivery.proof_image = proof_image
         delivery.actual_delivery = timezone.now()
         order.status = 'DELIVERED'

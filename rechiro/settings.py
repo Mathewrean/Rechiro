@@ -180,6 +180,11 @@ if importlib.util.find_spec("whitenoise") is not None:
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = str(BASE_DIR / 'media')
+try:
+    os.makedirs(MEDIA_ROOT, exist_ok=True)
+except (OSError, PermissionError):
+    pass
+WHITENOISE_ROOT = str(MEDIA_ROOT)
 
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
