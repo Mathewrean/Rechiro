@@ -683,5 +683,14 @@
             deferredInstallPrompt = null;
         });
     </script>
+    <script>
+        window.onerror = function(msg, url, line, col, error) {
+            console.error('[Global Error]', {message: msg, url: url, line: line, column: col, error: error});
+            return false;
+        };
+        window.addEventListener('unhandledrejection', function(event) {
+            console.error('[Unhandled Promise Rejection]', event.reason);
+        });
+    </script>
 </body>
 </html>

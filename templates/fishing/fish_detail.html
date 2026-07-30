@@ -32,7 +32,7 @@
                 <div class="relative">
                     <div class="aspect-square rounded-xl overflow-hidden bg-gradient-to-br from-blue-50 to-blue-100">
                         {% if fish.has_image_file %}
-                        <img src="{{ fish.image.url }}" alt="{{ fish.name }}" class="w-full h-full object-cover">
+                        <img src="{{ fish.image.url }}" alt="{{ fish.name }}" class="w-full h-full object-cover" onerror="this.onerror=null;this.style.display='none'">
                         {% else %}
                         <div class="w-full h-full flex flex-col items-center justify-center">
                             <i class="fas fa-fish text-8xl text-blue-200 mb-4"></i>
@@ -186,7 +186,7 @@
                 <a href="{% url 'fishing:fish_detail' related.id %}" class="bg-white rounded-xl shadow-sm hover:shadow-lg transition-shadow overflow-hidden group">
                     <div class="aspect-square bg-gradient-to-br from-blue-50 to-blue-100 relative">
                         {% if related.has_image_file %}
-                        <img src="{{ related.image.url }}" alt="{{ related.name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform">
+                        <img src="{{ related.image.url }}" alt="{{ related.name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" onerror="this.onerror=null;this.style.display='none'">
                         {% else %}
                         <div class="w-full h-full flex items-center justify-center">
                             <i class="fas fa-fish text-4xl text-blue-200"></i>
