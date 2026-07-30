@@ -7,7 +7,6 @@ from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from users.models import User, FishermanProfile, CustomerProfile, BeachChairmanProfile
-from users.models import PhoneVerificationTransaction
 from .models import (
     Fish,
     Cart,
@@ -30,8 +29,6 @@ class CheckoutAndPaymentFlowTests(TestCase):
             role='customer',
             phone='0712345678',
             email='buyer@example.com',
-            email_verified=True,
-            phone_verified=True,
         )
         CustomerProfile.objects.create(
             user=self.customer,
@@ -46,7 +43,6 @@ class CheckoutAndPaymentFlowTests(TestCase):
             role='fisherman',
             phone='0700000000',
             email='fisher@example.com',
-            phone_verified=True,
         )
         FishermanProfile.objects.create(
             user=self.fisherman,
@@ -103,31 +99,6 @@ class CheckoutAndPaymentFlowTests(TestCase):
         self.assertEqual(tx.net_payout, Decimal('980.00'))
         _, kwargs = mock_stk.call_args
         self.assertIsNone(kwargs['business_shortcode'])
-
-    def test_checkout_requires_customer_phone_verification(self):
-        unverified_customer = User.objects.create_user(
-            username='unverified_buyer',
-            password='testpass123',
-            role='customer',
-            phone='0722334455',
-            email='unverified@example.com',
-            email_verified=True,
-            phone_verified=False,
-        )
-        CustomerProfile.objects.create(
-            user=unverified_customer,
-            phone='0722334455',
-            delivery_location='Nairobi',
-            preferred_fulfillment='delivery',
-        )
-        self.client.login(username='unverified_buyer', password='testpass123')
-        cart = Cart.objects.create(user=unverified_customer)
-        CartItem.objects.create(cart=cart, fish=self.fish, weight_kg=Decimal('1.00'))
-        response = self.client.post(reverse('fishing:checkout_process'), {
-            'fulfillment_method': 'delivery',
-            'delivery_location': 'Nairobi CBD',
-        })
-        self.assertIn(response.status_code, [301, 302])
 
     @override_settings(MPESA_CALLBACK_URL='https://example.com/callback')
     @patch('fishing.views.initiate_stk_push')
@@ -437,38 +408,6 @@ class CheckoutAndPaymentFlowTests(TestCase):
         self.assertEqual(tx.b2c_status, 'SUCCESS')
         self.assertEqual(tx.b2c_transaction_id, 'B2C123')
 
-    def test_phone_verification_callback_marks_user_phone_verified(self):
-        self.fisherman.phone_verified = False
-        self.fisherman.save(update_fields=['phone_verified'])
-        PhoneVerificationTransaction.objects.create(
-            user=self.fisherman,
-            phone_number='0700000000',
-            amount=Decimal('1.00'),
-            checkout_request_id='VERIFY-CRQ1',
-            merchant_request_id='VERIFY-MRQ1',
-            status='PENDING',
-        )
-        payload = {
-            'Body': {
-                'stkCallback': {
-                    'MerchantRequestID': 'VERIFY-MRQ1',
-                    'CheckoutRequestID': 'VERIFY-CRQ1',
-                    'ResultCode': 0,
-                    'ResultDesc': 'Success',
-                    'CallbackMetadata': {
-                        'Item': [
-                            {'Name': 'Amount', 'Value': 1},
-                            {'Name': 'MpesaReceiptNumber', 'Value': 'PV12345'},
-                        ]
-                    }
-                }
-            }
-        }
-        response = self.client.post(reverse('fishing:mpesa_callback'), data=json.dumps(payload), content_type='application/json')
-        self.assertEqual(response.status_code, 200)
-        self.fisherman.refresh_from_db()
-        self.assertTrue(self.fisherman.phone_verified)
-
     @patch('fishing.views.initiate_stk_push')
     def test_callback_amount_mismatch_rejected(self, mock_stk):
         mock_stk.return_value = {
@@ -512,8 +451,7 @@ class CheckoutAndPaymentFlowTests(TestCase):
 class DeliveryAndPickupEndpointsTests(TestCase):
     def setUp(self):
         self.customer = User.objects.create_user(
-            username='customer1', password='testpass123', role='customer', phone='0711111111', email='c1@example.com', email_verified=True
-        )
+            username='customer1', password='testpass123', role='customer', phone='0711111111', email='c1@example.com'        )
         self.delivery_user = User.objects.create_user(
             username='deliver1', password='testpass123', role='delivery', phone='0722222222', email='d1@example.com'
         )
@@ -587,7 +525,6 @@ class FishImageUploadTests(TestCase):
             role='fisherman',
             phone='0700011111',
             email='imgfisher@example.com',
-            phone_verified=True,
         )
         FishermanProfile.objects.create(
             user=self.fisherman,
@@ -667,7 +604,6 @@ class ChairmanApprovalWorkflowTests(TestCase):
             role='fisherman',
             phone='0700099999',
             email='f2@example.com',
-            phone_verified=True,
         )
         self.profile = FishermanProfile.objects.create(
             user=self.fisherman,
@@ -727,7 +663,6 @@ class ChairmanApprovalWorkflowTests(TestCase):
             role='fisherman',
             phone='0700066666',
             email='other@example.com',
-            phone_verified=True,
         )
         FishermanProfile.objects.create(
             user=other_fisher,

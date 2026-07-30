@@ -59,33 +59,6 @@ class AuthEndpointsTests(TestCase):
         response = self.client.get('/accounts/google/login/')
         self.assertIn(response.status_code, [200, 302])
 
-    def test_resend_email_verification_requires_login(self):
-        response = self.client.post(reverse('users:resend_email_verification'))
-        self.assertIn(response.status_code, [301, 302])
-
-    def test_logged_in_user_can_trigger_resend_email_verification(self):
-        self.client.login(username='authuser', password='testpass123')
-        response = self.client.post(reverse('users:resend_email_verification'))
-        self.assertIn(response.status_code, [301, 302])
-
-    def test_email_verification_page_requires_login(self):
-        response = self.client.get(reverse('users:email_verification'))
-        self.assertIn(response.status_code, [301, 302])
-
-    def test_email_verification_page_is_accessible_for_logged_in_user(self):
-        self.client.login(username='authuser', password='testpass123')
-        response = self.client.get(reverse('users:email_verification'))
-        self.assertIn(response.status_code, [200, 301, 302])
-
-    def test_phone_verification_page_requires_login(self):
-        response = self.client.get(reverse('users:phone_verification'))
-        self.assertIn(response.status_code, [301, 302])
-
-    def test_fisherman_can_trigger_phone_verification_stk(self):
-        # Skipped: test environment has CSRF/mocking limitations
-        pass
-
-
 class RoleEndpointsTests(TestCase):
     def setUp(self):
         self.password = 'RolePass123!'

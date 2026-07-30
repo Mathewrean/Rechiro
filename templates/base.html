@@ -118,13 +118,6 @@
             font-size: 0.85rem;
             color: #dc2626;
         }
-        #emailVerificationModal.active {
-            display: flex !important;
-        }
-        #emailVerificationModal.active > div {
-            transform: scale(1);
-            opacity: 1;
-        }
         .form-panel .form-actions {
             display: flex;
             flex-wrap: wrap;
@@ -507,24 +500,6 @@
         });
     </script>
 <script>
-        window.USER_IS_AUTHENTICATED = {% if user.is_authenticated %}true{% else %}false{% endif %};
-        window.USER_EMAIL = '{{ user.email|escapejs }}';
-        (function() {
-            var emailModal = document.getElementById('emailVerificationModal');
-            if (emailModal && window.USER_IS_AUTHENTICATED && window.USER_EMAIL) {
-                emailModal.classList.add('active');
-                document.body.classList.add('overflow-hidden');
-            }
-            function closeModal() {
-                if (emailModal) {
-                    emailModal.classList.remove('active');
-                    document.body.classList.remove('overflow-hidden');
-                }
-            }
-            document.getElementById('closeVerificationModal')?.addEventListener('click', closeModal);
-        })();
-    </script>
-    <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Auto-refresh unchanged
             const mobileMenuBtn = document.getElementById('mobile-menu-btn');

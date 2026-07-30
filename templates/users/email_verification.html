@@ -1,54 +1,21 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}Account{% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-gray-50 py-10">
     <div class="max-w-2xl mx-auto px-4">
         <div class="bg-white rounded-2xl shadow-lg p-8">
             <h1 class="text-2xl font-bold text-gray-800 mb-3">
-                <i class="fas fa-envelope-open-text mr-2 text-primary"></i>Email Verification
+                <i class="fas fa-user mr-2 text-primary"></i>My Account
             </h1>
-
-            {% if user.email_verified %}
-                <div class="bg-green-50 border border-green-200 text-green-800 rounded-lg p-4 flex items-center">
-                    <i class="fas fa-check-circle text-2xl mr-3"></i>
-                    <div>
-                        <p class="font-semibold">Your email is verified!</p>
-                        <p class="text-sm mt-1">You can now proceed to checkout and place orders.</p>
-                    </div>
+            <div class="bg-green-50 border border-green-200 text-green-800 rounded-lg p-4 flex items-center">
+                <i class="fas fa-check-circle text-2xl mr-3"></i>
+                <div>
+                    <p class="font-semibold">Welcome, {{ user.username }}!</p>
+                    <p class="text-sm mt-1">Your account is fully active. You can browse, buy, and sell fish.</p>
                 </div>
-            {% else %}
-                <div class="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-4 mb-6">
-                    <p class="font-medium mb-2">
-                        <i class="fas fa-exclamation-triangle mr-2"></i>Email verification required
-                    </p>
-                    <p class="text-sm">Please verify your email to unlock full marketplace features and checkout.</p>
-                </div>
-
-                <p class="text-gray-700 mb-4">
-                    Current email: <span class="font-semibold">{{ user.email|default:"Not set" }}</span>
-                </p>
-
-                <form method="post" action="{% url 'users:resend_email_verification' %}" style="margin-bottom: 1rem;">
-                    {% csrf_token %}
-                    <button type="submit" style="background-color:#0b5d66; color:white; padding:0.85rem 1.5rem; border:none; border-radius:0.5rem; cursor:pointer; font-weight:500;">
-                        Send Verification Email
-                    </button>
-                </form>
-
-                {% if not user.email %}
-                    <p class="text-sm text-red-700 mt-4 flex items-center">
-                        <i class="fas fa-warning mr-2"></i>You need to add an email address first.
-                        <a href="{% url 'users:edit_profile' %}" class="underline ml-1">Edit profile</a>
-                    </p>
-                {% else %}
-                    <p class="text-xs text-gray-500 mt-4">
-                        <i class="fas fa-info-circle mr-1"></i>Didn't receive an email? Check your spam folder or try again.
-                        The verification link expires after 7 days.
-                    </p>
-                {% endif %}
-            {% endif %}
+            </div>
         </div>
     </div>
 </div>
