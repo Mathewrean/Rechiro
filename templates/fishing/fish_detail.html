@@ -185,7 +185,7 @@
                 {% for related in related_fish %}
                 <a href="{% url 'fishing:fish_detail' related.id %}" class="bg-white rounded-xl shadow-sm hover:shadow-lg transition-shadow overflow-hidden group">
                     <div class="aspect-square bg-gradient-to-br from-blue-50 to-blue-100 relative">
-                        {% if related.image %}
+                        {% if related.has_image_file %}
                         <img src="{{ related.image.url }}" alt="{{ related.name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform">
                         {% else %}
                         <div class="w-full h-full flex items-center justify-center">
