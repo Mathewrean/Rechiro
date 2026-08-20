@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.db import transaction, models
-from django.db.models import Sum
+from django.db.models import Sum, Count, Avg
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
@@ -21,10 +21,10 @@ from collections import defaultdict
 from .models import (
     Fish, Cart, CartItem, Order, OrderItem, PaymentTransaction, Delivery, FishTransactionLog,
     PickupPoint, DeliveryAuditLog, SellerNotification, PlatformFeeLog, ChairmanApprovalRequest,
-    UserNotification, ContactMessage, FAQCategory, FAQ, HelpArticle
+    UserNotification, ContactMessage, FAQCategory, FAQ, HelpArticle, FishReview
 )
 from .mpesa_service import MpesaService, initiate_stk_push, process_payment_callback
-from .forms import ContactForm
+from .forms import ContactForm, ReviewForm
 from users.models import FishermanProfile, CustomerProfile, User, BeachChairmanProfile
 
 logger = logging.getLogger(__name__)
@@ -173,21 +173,39 @@ def fish_marketplace(request):
 def fish_detail(request, fish_id):
     """Display detailed fish information with weight selection"""
     fish = get_object_or_404(Fish, id=fish_id)
-    
+
     # Get related fish from same fisherman
     related_fish = Fish.objects.filter(
         fisherman=fish.fisherman,
         status='available',
         available_weight__gt=0
     ).exclude(id=fish.id)[:4]
-    
+
     # Get fisherman profile
     fisherman_profile = None
     try:
         fisherman_profile = fish.fisherman.fisherman_profile
     except FishermanProfile.DoesNotExist:
         pass
-    
+
+    # Reviews + rating analytics
+    reviews = fish.reviews.filter(is_approved=True).select_related('user')[:50]
+    rating_distribution = list(
+        fish.reviews.filter(is_approved=True)
+        .values('rating').annotate(count=Count('id')).order_by('-rating')
+    )
+    dist_map = {r['rating']: r['count'] for r in rating_distribution}
+    total_reviews = fish.review_count
+    pct_total = total_reviews or 1
+    rating_breakdown = [
+        (star, dist_map.get(star, 0), round(dist_map.get(star, 0) / pct_total * 100, 1))
+        for star in range(5, 0, -1)
+    ]
+    user_review = None
+    if request.user.is_authenticated:
+        user_review = fish.reviews.filter(user=request.user).first()
+    review_form = ReviewForm(instance=user_review)
+
     # Cart item in current cart
     in_cart = False
     cart_weight = 0
@@ -200,15 +218,51 @@ def fish_detail(request, fish_id):
                 cart_weight = cart_item.weight_kg
         except Cart.DoesNotExist:
             pass
-    
+
+    share_url = request.build_absolute_uri(fish.get_absolute_url())
+    og = fish.get_og_metadata()
+
     context = {
         'fish': fish,
         'related_fish': related_fish,
         'fisherman_profile': fisherman_profile,
         'in_cart': in_cart,
         'cart_weight': cart_weight,
+        'reviews': reviews,
+        'rating_breakdown': rating_breakdown,
+        'user_review': user_review,
+        'review_form': review_form,
+        'share_url': share_url,
+        'og': og,
     }
     return render(request, 'fishing/fish_detail.html', context)
+
+
+@login_required
+def add_review(request, fish_id):
+    """Submit or update a customer review for a fish listing"""
+    fish = get_object_or_404(Fish, id=fish_id)
+
+    if request.user.role != 'customer':
+        messages.error(request, 'Only customers can leave reviews.')
+        return redirect('fishing:fish_detail', fish_id=fish.id)
+
+    if request.method == 'POST':
+        existing = fish.reviews.filter(user=request.user).first()
+        form = ReviewForm(request.POST, instance=existing)
+        if form.is_valid():
+            review = form.save(commit=False)
+            review.fish = fish
+            review.user = request.user
+            review.save()
+            if existing:
+                messages.success(request, 'Your review has been updated.')
+            else:
+                messages.success(request, 'Thanks! Your review was posted.')
+            return redirect('fishing:fish_detail', fish_id=fish.id)
+        messages.error(request, 'Please correct the errors below.')
+
+    return redirect('fishing:fish_detail', fish_id=fish.id)
 
 
 @login_required

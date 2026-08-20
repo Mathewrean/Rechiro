@@ -7,6 +7,7 @@ urlpatterns = [
     # Marketplace
     path('', views.fish_marketplace, name='marketplace'),
     path('fish/<int:fish_id>/', views.fish_detail, name='fish_detail'),
+    path('fish/<int:fish_id>/review/', views.add_review, name='add_review'),
     
     # Cart
     path('cart/', views.cart_view, name='cart'),

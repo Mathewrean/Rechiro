@@ -1,5 +1,5 @@
 from django import forms
-from .models import Fish
+from .models import Fish, FishReview
 
 
 class CatchForm(forms.ModelForm):
@@ -74,3 +74,20 @@ class ContactForm(forms.Form):
             if attachment.size > 5 * 1024 * 1024:
                 raise forms.ValidationError('File size must not exceed 5MB.')
         return attachment
+
+
+class ReviewForm(forms.ModelForm):
+    class Meta:
+        model = FishReview
+        fields = ['rating', 'category', 'comment']
+        widgets = {
+            'rating': forms.RadioSelect(choices=[(i, f'{i}') for i in range(1, 6)]),
+            'category': forms.Select(attrs={'class': 'form-control'}),
+            'comment': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Share details about quality, freshness, delivery...'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['rating'].widget.attrs.update({'class': 'form-control'})
+        self.fields['rating'].label = 'Your rating'
+        self.fields['comment'].required = False

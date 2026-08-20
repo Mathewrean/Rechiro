@@ -2,6 +2,7 @@ import importlib.util
 from pathlib import Path
 
 from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.http import FileResponse, Http404, JsonResponse
@@ -56,3 +57,7 @@ if getattr(settings, "ALLAUTH_INSTALLED", False):
     urlpatterns.append(path('accounts/', include('allauth.urls')))
 
 urlpatterns += staticfiles_urlpatterns()
+
+# Serve user-uploaded media (product images) during development.
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

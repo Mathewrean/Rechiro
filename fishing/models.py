@@ -66,16 +66,32 @@ class Fish(models.Model):
         return reverse('fishing:fish_detail', kwargs={'fish_id': self.pk})
     
     def get_og_metadata(self):
-        site_url = getattr(settings, 'SITE_URL', 'https://rechiro-production.up.railway.app')
-        image_url = f"{site_url}{self.image.url}" if self.image and self.has_image_file else f"{site_url}/static/branding/rechiro-512.png"
+        site_url = getattr(settings, 'SITE_URL', 'https://rechiro.onrender.com').rstrip('/')
+        if self.image and self.has_image_file:
+            image_url = site_url + self.image.url
+        else:
+            image_url = site_url + '/static/branding/rechiro-512.png'
+        weight = self.available_weight
+        desc = self.description[:120] if self.description else 'Direct from Lake Victoria fishermen.'
         return {
             'title': f"{self.name} - Fresh {self.get_fish_type_display()} from Rechiro",
-            'description': f"Buy {self.weight_kg}kg of fresh {self.get_fish_type_display()} at KES {self.price_per_kg}/kg. {self.description[:120] if self.description else 'Direct from Lake Victoria fishermen.'}",
+            'description': f"Buy {weight}kg of fresh {self.get_fish_type_display()} at KES {self.price_per_kg}/kg. {desc}",
             'image': image_url,
-            'url': f"{site_url}{self.get_absolute_url()}",
+            'url': site_url + self.get_absolute_url(),
             'price_amount': float(self.price_per_kg),
             'price_currency': 'KES'
         }
+
+    @property
+    def average_rating(self):
+        approved = self.reviews.filter(is_approved=True)
+        if approved.exists():
+            return round(sum(r.rating for r in approved) / approved.count(), 1)
+        return 0
+
+    @property
+    def review_count(self):
+        return self.reviews.filter(is_approved=True).count()
 
     def get_total_value(self):
         """Calculate total value of available fish"""
@@ -631,3 +647,39 @@ class HelpArticle(models.Model):
             word_count = len(self.content.split())
             self.reading_time = max(1, int(word_count / 200))
         super().save(*args, **kwargs)
+
+
+class FishReview(models.Model):
+    """Customer reviews/ratings for individual fish listings."""
+    CATEGORY_CHOICES = [
+        ('general', 'General'),
+        ('quality', 'Quality'),
+        ('freshness', 'Freshness'),
+        ('delivery', 'Delivery'),
+        ('packaging', 'Packaging'),
+        ('value', 'Value for Money'),
+    ]
+    RATING_CHOICES = [(i, f'{i} ★') for i in range(1, 6)]
+
+    fish = models.ForeignKey(Fish, on_delete=models.CASCADE, related_name='reviews')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='fish_reviews'
+    )
+    rating = models.PositiveSmallIntegerField(choices=RATING_CHOICES)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='general')
+    comment = models.TextField(blank=True, max_length=1000)
+    is_approved = models.BooleanField(default=True)
+    helpful_count = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ('fish', 'user')
+        verbose_name = 'Fish Review'
+        verbose_name_plural = 'Fish Reviews'
+
+    def __str__(self):
+        return f"{self.user.username} rated {self.fish.name} {self.rating}/5"

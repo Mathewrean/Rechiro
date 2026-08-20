@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load fishing_extras %}
 
 {% block title %}Rechiro Marketplace - Fresh Fish Marketplace{% endblock %}
 
@@ -95,15 +96,27 @@
                     {% endif %}
                 </div>
                 <div class="p-4">
-                    <h3 class="font-bold text-gray-800">{{ fish.name }}</h3>
-                    <p class="text-sm text-gray-500">{{ fish.get_fish_type_display }}</p>
-                    <div class="flex items-center justify-between mt-2">
-                        <span class="text-xl font-bold text-green-600">KES {{ fish.price_per_kg }}/kg</span>
-                        <span class="text-sm text-gray-500">{{ fish.available_weight }}kg</span>
-                    </div>
-                    <a href="{% url 'fishing:fish_detail' fish.id %}" class="block w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium text-center mt-3 transition-colors">
-                        View Details
-                    </a>
+                     <h3 class="font-bold text-gray-800">{{ fish.name }}</h3>
+                     <p class="text-sm text-gray-500">{{ fish.get_fish_type_display }}</p>
+                     {% if fish.review_count > 0 %}
+                     <div class="flex items-center gap-2 mt-2 text-sm text-gray-600">
+                         {% star_widget fish.average_rating %}
+                         <span class="font-medium">{{ fish.average_rating }}</span>
+                         <span class="text-gray-400">({{ fish.review_count }})</span>
+                     </div>
+                     {% endif %}
+                     <div class="flex items-center justify-between mt-2">
+                         <span class="text-xl font-bold text-green-600">KES {{ fish.price_per_kg }}/kg</span>
+                         <span class="text-sm text-gray-500">{{ fish.available_weight }}kg</span>
+                     </div>
+                     <div class="mt-3 flex gap-2">
+                         <a href="{% url 'fishing:fish_detail' fish.id %}" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium text-center transition-colors">
+                             View Details
+                         </a>
+                         <a href="{% url 'fishing:fish_detail' fish.id %}" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-lg font-medium text-center transition-colors">
+                             <i class="fas fa-share-nodes"></i>
+                         </a>
+                     </div>
                 </div>
             </div>
             {% endfor %}
