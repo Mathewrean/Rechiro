@@ -2,7 +2,8 @@ services:
   - type: web
     name: rechiro
     env: python
-    buildCommand: pip install -r requirements.txt && mkdir -p staticfiles && python manage.py collectstatic --noinput && python manage.py migrate && python manage.py setup_sample_data
+    buildCommand: pip install -r requirements.txt && mkdir -p staticfiles && python manage.py collectstatic --noinput
+    releaseCommand: python manage.py migrate && python manage.py setup_sample_data
     startCommand: gunicorn rechiro.wsgi:application
     envVars:
       - key: DEBUG
@@ -15,6 +16,8 @@ services:
         value: "https://rechiro.onrender.com"
       - key: DATABASE_URL
         value: "postgresql://postgres:29541227006m@db.lyqfkparljiwqfbgwksv.supabase.co:5432/postgres"
+      - key: PYTHON_VERSION
+        value: "3.11"
       - key: MPESA_CALLBACK_URL
         value: "https://rechiro.onrender.com/api/mpesa/callback/"
       - key: EMAIL_BACKEND
@@ -22,39 +25,57 @@ services:
       - key: EMAIL_HOST
         value: "smtp.gmail.com"
       - key: EMAIL_HOST_USER
-        value: "mathewrea"
+        value: "mathewrean@gmail.com"
       - key: EMAIL_HOST_PASSWORD
-        value: ""
+        value: "xuoo beyy bwpz ciga"
       - key: DEFAULT_FROM_EMAIL
-        value: "noreply@rechiro.com"
+        value: "mathewrean@gmail.com"
       - key: EMAIL_PORT
-        value: "465"
+        value: "587"
       - key: EMAIL_USE_TLS
-        value: "false"
-      - key: EMAIL_USE_SSL
         value: "true"
+      - key: EMAIL_USE_SSL
+        value: "false"
       - key: ADMIN_USERNAME
-        value: ""
+        value: "admin"
+      - key: ADMIN_EMAIL
+        value: "mathewrean@pst.com"
       - key: ADMIN_PASSWORD
-        value: ""
+        value: "29541227006"
+      - key: ADMIN_PHONE
+        value: "+254798200675"
       - key: MPESA_BASE_URL
         value: "https://sandbox.safaricom.co.ke"
       - key: MPESA_BUSINESS_SHORT_CODE
-        value: ""
+        value: "174379"
       - key: MPESA_CONSUMER_KEY
-        value: ""
+        value: "FcbgCgnnIxIEY9fFWRl9PFXB15xgPqEUl9AIa3mIbGgPbTOg"
       - key: MPESA_CONSUMER_SECRET
-        value: ""
+        value: "e8M2xIKQo7ppCF3rKJdcR4XxYYw04LJa7HlVm8IDXmo8pPxzPoRp4jQcg2WiJxe8"
       - key: MPESA_INITIATOR_NAME
         value: "Rechiro"
       - key: MPESA_PASSKEY
-        value: ""
+        value: "bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"
       - key: MPESA_SECURITY_CREDENTIAL
         value: ""
       - key: GOOGLE_CLIENT_ID
         value: ""
       - key: GOOGLE_CLIENT_SECRET
         value: ""
+      - key: JWT_SECRET_KEY
+        value: "BgmdojFHDFYUMmvKewNGJuTQGikBukS9Pdi0QjG9Yag="
+      - key: AFRICASTALKING_API_KEY
+        value: "atsk_b69316093ea94e2f0b4831c8ec7e5a9af6919fd456b3596dde67989f54795f7e8154ddb2"
+      - key: AFRICASTALKING_USERNAME
+        value: "mathewrean"
+      - key: CELERY_BROKER_URL
+        value: "redis://red-d9ebsr3rjlhs73c4n5dg:6379"
+      - key: CELERY_RESULT_BACKEND
+        value: "redis://red-d9ebsr3rjlhs73c4n5dg:6379"
+      - key: CELERY_WORKER_ENABLED
+        value: "false"
+      - key: CORS_ALLOWED_ORIGINS
+        value: "http://localhost:8000,https://albert-incult-superfluously.ngrok-free.dev,https://rechiro-production.up.railway.app,https://*.ngrok.io,https://*.ngrok-free.app,https://*.ngrok-free.dev,https://*.ngrok.app,https://*.onrender.com,https://rechiro.onrender.com"
       - key: SECURE_SSL_REDIRECT
         value: "false"
       - key: SESSION_COOKIE_SECURE
