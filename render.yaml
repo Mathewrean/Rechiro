@@ -15,7 +15,7 @@ services:
       - key: SITE_URL
         value: "https://rechiro.onrender.com"
       - key: DATABASE_URL
-        value: "postgresql://postgres:29541227006m@db.lyqfkparljiwqfbgwksv.supabase.co:5432/postgres"
+        value: "postgresql://postgres.lyqfkparljiwqfbgwksv:29541227006m@aws-0-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=require"
       - key: PYTHON_VERSION
         value: "3.11"
       - key: MPESA_CALLBACK_URL
